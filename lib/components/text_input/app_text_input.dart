@@ -15,7 +15,11 @@ class AppTextInput extends ConsumerStatefulWidget {
     this.keyboardType = TextInputType.text,
     this.obscureText = false,
     this.textInputAction = TextInputAction.done,
+    this.textCapitalization = TextCapitalization.sentences,
+    this.autocorrect = true,
+    this.enableSuggestions = true,
     this.onChanged,
+    this.onSubmitted,
   });
 
   final TextEditingController controller;
@@ -26,7 +30,11 @@ class AppTextInput extends ConsumerStatefulWidget {
   final TextInputType keyboardType;
   final bool obscureText;
   final TextInputAction textInputAction;
+  final TextCapitalization textCapitalization;
+  final bool autocorrect;
+  final bool enableSuggestions;
   final ValueChanged<String>? onChanged;
+  final ValueChanged<String>? onSubmitted;
 
   @override
   ConsumerState<AppTextInput> createState() => _AppTextInputState();
@@ -77,7 +85,11 @@ class _AppTextInputState extends ConsumerState<AppTextInput> {
           keyboardType: widget.keyboardType,
           obscureText: widget.obscureText,
           textInputAction: widget.textInputAction,
+          textCapitalization: widget.textCapitalization,
+          autocorrect: widget.autocorrect,
+          enableSuggestions: widget.enableSuggestions,
           onChanged: widget.onChanged,
+          onSubmitted: widget.onSubmitted,
           cursorColor: textColor,
           style: TextStyle(color: textColor, fontSize: 14),
           placeholder: widget.placeholder,

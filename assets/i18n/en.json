@@ -1,0 +1,16 @@
+{
+  "auth.loginTitle": "Login",
+  "auth.registerTitle": "Register",
+  "auth.registerSuccess": "Registered successfully. Check your email if confirmation is required.",
+  "auth.unexpectedError": "Unexpected error. Please try again.",
+  "auth.emailRequired": "Email is required.",
+  "auth.emailInvalid": "Enter a valid email.",
+  "auth.passwordMinLength": "Password must be at least 6 characters.",
+  "auth.emailLabel": "Email",
+  "auth.emailPlaceholder": "name@example.com",
+  "auth.passwordLabel": "Password",
+  "auth.passwordPlaceholder": "********",
+  "auth.pleaseWait": "Please wait...",
+  "auth.registerPrompt": "Need an account? Register",
+  "auth.loginPrompt": "Already have an account? Login"
+}

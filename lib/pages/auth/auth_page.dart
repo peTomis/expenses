@@ -1,3 +1,4 @@
+import 'package:expenses/providers/color_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -6,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../components/button/app_button.dart';
 import '../../components/card/app_card.dart';
 import '../../components/text_input/app_text_input.dart';
+import '../../i18n/app_localizations.dart';
 import 'auth_providers.dart';
 
 class AuthPage extends ConsumerStatefulWidget {
@@ -30,6 +32,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
   }
 
   Future<void> _submit() async {
+    final l10n = AppLocalizations.of(context);
     final authForm = ref.read(authFormProvider);
     if (!_validateInputs() || authForm.isSubmitting) {
       return;
@@ -52,12 +55,11 @@ class _AuthPageState extends ConsumerState<AuthPage> {
         return;
       }
 
-      final message = authForm.isLoginMode
-          ? 'Logged in successfully.'
-          : 'Registered successfully. Check your email if confirmation is required.';
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(message)));
+      if (!authForm.isLoginMode) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.text('auth.registerSuccess'))),
+        );
+      }
     } on AuthException catch (error) {
       if (!mounted) {
         return;
@@ -70,7 +72,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Unexpected error. Please try again.')),
+        SnackBar(content: Text(l10n.text('auth.unexpectedError'))),
       );
     } finally {
       ref.read(authFormProvider.notifier).setSubmitting(false);
@@ -78,6 +80,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
   }
 
   bool _validateInputs() {
+    final l10n = AppLocalizations.of(context);
     final email = _emailController.text.trim();
     final password = _passwordController.text;
 
@@ -85,13 +88,13 @@ class _AuthPageState extends ConsumerState<AuthPage> {
     String? passwordError;
 
     if (email.isEmpty) {
-      emailError = 'Email is required.';
+      emailError = l10n.text('auth.emailRequired');
     } else if (!email.contains('@')) {
-      emailError = 'Enter a valid email.';
+      emailError = l10n.text('auth.emailInvalid');
     }
 
     if (password.length < 6) {
-      passwordError = 'Password must be at least 6 characters.';
+      passwordError = l10n.text('auth.passwordMinLength');
     }
 
     setState(() {
@@ -104,8 +107,11 @@ class _AuthPageState extends ConsumerState<AuthPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final authForm = ref.watch(authFormProvider);
-    final title = authForm.isLoginMode ? 'Login' : 'Register';
+    final title = authForm.isLoginMode
+        ? l10n.text('auth.loginTitle')
+        : l10n.text('auth.registerTitle');
 
     return Scaffold(
       body: SafeArea(
@@ -120,7 +126,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                   width: 128,
                   height: 128,
                   colorFilter: ColorFilter.mode(
-                    Theme.of(context).colorScheme.primary,
+                    ref.watch(appPrimaryTextColorProvider),
                     BlendMode.srcIn,
                   ),
                 ),
@@ -132,10 +138,13 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                     children: [
                       AppTextInput(
                         controller: _emailController,
-                        label: 'Email',
-                        placeholder: 'name@example.com',
+                        label: l10n.text('auth.emailLabel'),
+                        placeholder: l10n.text('auth.emailPlaceholder'),
                         keyboardType: TextInputType.emailAddress,
                         textInputAction: TextInputAction.next,
+                        textCapitalization: TextCapitalization.none,
+                        autocorrect: false,
+                        enableSuggestions: false,
                         errorText: _emailError,
                         onChanged: (_) {
                           if (_emailError == null) {
@@ -149,11 +158,15 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                       const SizedBox(height: 12),
                       AppTextInput(
                         controller: _passwordController,
-                        label: 'Password',
-                        placeholder: '********',
+                        label: l10n.text('auth.passwordLabel'),
+                        placeholder: l10n.text('auth.passwordPlaceholder'),
                         obscureText: true,
                         textInputAction: TextInputAction.done,
+                        textCapitalization: TextCapitalization.none,
+                        autocorrect: false,
+                        enableSuggestions: false,
                         errorText: _passwordError,
+                        onSubmitted: (_) => _submit(),
                         onChanged: (_) {
                           if (_passwordError == null) {
                             return;
@@ -165,7 +178,9 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                       ),
                       const SizedBox(height: 32),
                       AppButton(
-                        label: authForm.isSubmitting ? 'Please wait...' : title,
+                        label: authForm.isSubmitting
+                            ? l10n.text('auth.pleaseWait')
+                            : title,
                         isLoading: authForm.isSubmitting,
                         onPressed: authForm.isSubmitting ? null : _submit,
                       ),
@@ -180,8 +195,8 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                               },
                         child: Text(
                           authForm.isLoginMode
-                              ? 'Need an account? Register'
-                              : 'Already have an account? Login',
+                              ? l10n.text('auth.registerPrompt')
+                              : l10n.text('auth.loginPrompt'),
                         ),
                       ),
                     ],

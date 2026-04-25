@@ -1,16 +1,22 @@
 {
   "auth.loginTitle": "Login",
   "auth.registerTitle": "Register",
+  "auth.localTitle": "Local login",
   "auth.registerSuccess": "Registered successfully. Check your email if confirmation is required.",
   "auth.unexpectedError": "Unexpected error. Please try again.",
   "auth.emailRequired": "Email is required.",
   "auth.emailInvalid": "Enter a valid email.",
+  "auth.usernameRequired": "Username is required.",
   "auth.passwordMinLength": "Password must be at least 6 characters.",
   "auth.emailLabel": "Email",
   "auth.emailPlaceholder": "name@example.com",
+  "auth.usernameLabel": "Username",
+  "auth.usernamePlaceholder": "your name",
   "auth.passwordLabel": "Password",
   "auth.passwordPlaceholder": "********",
   "auth.pleaseWait": "Please wait...",
   "auth.registerPrompt": "Need an account? Register",
-  "auth.loginPrompt": "Already have an account? Login"
+  "auth.loginPrompt": "Already have an account? Login",
+  "auth.localPrompt": "Keep everything local",
+  "auth.credentialsPrompt": "Use email login"
 }

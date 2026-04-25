@@ -36,19 +36,29 @@ class AppTabBar extends ConsumerWidget {
       top: false,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-        child: Row(
-          children: [
-            for (final indexedItem in items.indexed)
-              Expanded(
-                child: _AppTabBarButton(
-                  item: indexedItem.$2,
-                  isSelected: indexedItem.$1 == selectedIndex,
-                  textColor: textColor,
-                  selectedColor: selectedColor,
-                  onTap: () => onSelected(indexedItem.$1),
-                ),
+        child: SizedBox(
+          height: 56,
+          width: double.infinity,
+          child: Align(
+            alignment: Alignment.center,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 320),
+              child: Row(
+                children: [
+                  for (final indexedItem in items.indexed)
+                    Expanded(
+                      child: _AppTabBarButton(
+                        item: indexedItem.$2,
+                        isSelected: indexedItem.$1 == selectedIndex,
+                        textColor: textColor,
+                        selectedColor: selectedColor,
+                        onTap: () => onSelected(indexedItem.$1),
+                      ),
+                    ),
+                ],
               ),
-          ],
+            ),
+          ),
         ),
       ),
     );
@@ -82,14 +92,14 @@ class _AppTabBarButton extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 160),
         curve: Curves.easeOut,
-        constraints: const BoxConstraints(minHeight: 52),
+        height: 56,
         decoration: BoxDecoration(
           color: isSelected ? selectedColor : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               isSelected ? item.selectedIcon : item.icon,

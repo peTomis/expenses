@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:expenses/components/button/app_button.dart';
@@ -11,6 +12,7 @@ import 'package:expenses/main.dart';
 void main() {
   setUpAll(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
+    SharedPreferences.setMockInitialValues({});
     const channel = MethodChannel('plugins.flutter.io/shared_preferences');
 
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger

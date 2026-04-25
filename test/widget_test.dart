@@ -1,30 +1,50 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'package:expenses/components/button/app_button.dart';
+import 'package:expenses/components/text_input/app_text_input.dart';
+import 'package:expenses/config/env.dart';
 import 'package:expenses/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  setUpAll(() async {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    const channel = MethodChannel('plugins.flutter.io/shared_preferences');
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (methodCall) async {
+          switch (methodCall.method) {
+            case 'getAll':
+              return <String, Object>{};
+            case 'setBool':
+            case 'setInt':
+            case 'setDouble':
+            case 'setString':
+            case 'setStringList':
+            case 'remove':
+            case 'clear':
+            case 'commit':
+              return true;
+            default:
+              return null;
+          }
+        });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    await AppEnv.load();
+    await Supabase.initialize(
+      url: AppEnv.supabaseUrl,
+      anonKey: AppEnv.supabaseAnonKey,
+    );
+  });
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+  testWidgets('Shows login form by default', (WidgetTester tester) async {
+    await tester.pumpWidget(const ProviderScope(child: MyApp()));
+    await tester.pumpAndSettle();
+
+    expect(find.widgetWithText(AppButton, 'Login'), findsOneWidget);
+    expect(find.byType(AppTextInput), findsNWidgets(2));
+    expect(find.byType(AppButton), findsOneWidget);
   });
 }

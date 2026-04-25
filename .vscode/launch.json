@@ -1,0 +1,19 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Flutter (Debug, VM Service 23532)",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "debug",
+      "toolArgs": ["--host-vmservice-port", "23532"]
+    },
+    {
+      "name": "Flutter Web (Debug, Web Port 23532)",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "debug",
+      "toolArgs": ["--web-port", "23532"]
+    }
+  ]
+}

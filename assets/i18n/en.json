@@ -17,6 +17,8 @@
   "auth.usernamePlaceholder": "your name",
   "auth.passwordLabel": "Password",
   "auth.passwordPlaceholder": "********",
+  "auth.forgotPassword": "Forgot password?",
+  "auth.resetPasswordSuccess": "Password reset email sent. Check your inbox.",
   "auth.pleaseWait": "Please wait...",
   "auth.accountChoiceTitle": "Choose account type",
   "auth.onlineAccountTitle": "Online account",

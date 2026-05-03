@@ -7,7 +7,7 @@ final homeTabIndexProvider = NotifierProvider<HomeTabIndexNotifier, int>(
 class HomeTabIndexNotifier extends Notifier<int> {
   @override
   int build() {
-    return 1;
+    return 2;
   }
 
   void setIndex(int index) {

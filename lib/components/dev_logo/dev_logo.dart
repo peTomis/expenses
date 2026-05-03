@@ -1,8 +1,10 @@
+import 'package:expenses/providers/color_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-class DevLogo extends StatelessWidget {
+class DevLogo extends ConsumerWidget {
   const DevLogo({super.key});
 
   static final _petomisUri = Uri.https('www.petomis.com');
@@ -12,7 +14,7 @@ class DevLogo extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Row(
       children: [
         const Expanded(child: SizedBox.shrink()),
@@ -24,8 +26,8 @@ class DevLogo extends StatelessWidget {
             child: SvgPicture.asset(
               'assets/icons/pe_logo.svg',
               width: 32,
-              colorFilter: const ColorFilter.mode(
-                Colors.black,
+              colorFilter: ColorFilter.mode(
+                ref.watch(appPrimary300ColorProvider),
                 BlendMode.srcIn,
               ),
             ),
@@ -35,7 +37,10 @@ class DevLogo extends StatelessWidget {
           child: Column(
             children: [
               Container(height: 11),
-              Container(height: 3.5, color: Colors.black),
+              Container(
+                height: 3.5,
+                color: ref.watch(appPrimary300ColorProvider),
+              ),
               Container(height: 10.5),
             ],
           ),

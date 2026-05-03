@@ -1,3 +1,6 @@
+import 'dart:ui';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -31,31 +34,67 @@ class AppTabBar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final textColor = ref.watch(appPrimaryTextColorProvider);
     final selectedColor = ref.watch(appPrimary300ColorProvider);
+    final surfaceColor = ref.watch(widgetBackgroundColorProvider);
 
     return SafeArea(
       top: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-        child: SizedBox(
-          height: 56,
-          width: double.infinity,
-          child: Align(
-            alignment: Alignment.center,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 320),
-              child: Row(
-                children: [
-                  for (final indexedItem in items.indexed)
-                    Expanded(
-                      child: _AppTabBarButton(
-                        item: indexedItem.$2,
-                        isSelected: indexedItem.$1 == selectedIndex,
-                        textColor: textColor,
-                        selectedColor: selectedColor,
-                        onTap: () => onSelected(indexedItem.$1),
+        padding: EdgeInsets.fromLTRB(20, 8, 20, kIsWeb ? 24 : 8),
+        child: Align(
+          alignment: Alignment.bottomCenter,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: surfaceColor.withValues(alpha: 0.72),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.12),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.26),
+                      blurRadius: 24,
+                      offset: const Offset(0, 12),
+                    ),
+                  ],
+                ),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 392),
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: SizedBox(
+                      width: items.length * _AppTabBarButton.itemWidth,
+                      height: _AppTabBarButton.itemHeight,
+                      child: Stack(
+                        children: [
+                          AnimatedPositioned(
+                            duration: const Duration(milliseconds: 280),
+                            curve: Curves.easeOutBack,
+                            left:
+                                selectedIndex * _AppTabBarButton.itemWidth +
+                                _AppTabBarButton.horizontalInset,
+                            top: 0,
+                            child: _SelectedTabBubble(color: selectedColor),
+                          ),
+                          Row(
+                            children: [
+                              for (final indexedItem in items.indexed)
+                                _AppTabBarButton(
+                                  item: indexedItem.$2,
+                                  isSelected: indexedItem.$1 == selectedIndex,
+                                  textColor: textColor,
+                                  onTap: () => onSelected(indexedItem.$1),
+                                ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
-                ],
+                  ),
+                ),
               ),
             ),
           ),
@@ -70,55 +109,71 @@ class _AppTabBarButton extends StatelessWidget {
     required this.item,
     required this.isSelected,
     required this.textColor,
-    required this.selectedColor,
     required this.onTap,
   });
+
+  static const double itemWidth = 56;
+  static const double itemHeight = 52;
+  static const double horizontalInset = 2;
 
   final AppTabBarItem item;
   final bool isSelected;
   final Color textColor;
-  final Color selectedColor;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final foregroundColor = isSelected
         ? textColor
-        : textColor.withValues(alpha: 0.62);
+        : textColor.withValues(alpha: 0.58);
 
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 160),
-        curve: Curves.easeOut,
-        height: 56,
-        decoration: BoxDecoration(
-          color: isSelected ? selectedColor : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              isSelected ? item.selectedIcon : item.icon,
-              size: 22,
-              color: foregroundColor,
-            ),
-            const SizedBox(height: 3),
-            Text(
-              item.label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: foregroundColor,
-                fontSize: 11,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+    return Tooltip(
+      message: item.label,
+      child: Semantics(
+        button: true,
+        selected: isSelected,
+        label: item.label,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: SizedBox(
+            width: itemWidth,
+            height: itemHeight,
+            child: Center(
+              child: AnimatedScale(
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOutCubic,
+                scale: isSelected ? 1.06 : 1,
+                child: Icon(
+                  isSelected ? item.selectedIcon : item.icon,
+                  size: 26,
+                  color: foregroundColor,
+                ),
               ),
             ),
-          ],
+          ),
         ),
+      ),
+    );
+  }
+}
+
+class _SelectedTabBubble extends StatelessWidget {
+  const _SelectedTabBubble({required this.color});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: color,
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
+      ),
+      child: const SizedBox(
+        width: _AppTabBarButton.itemHeight,
+        height: _AppTabBarButton.itemHeight,
       ),
     );
   }

@@ -33,6 +33,10 @@ class AuthRepository {
     return _client.auth.signUp(email: email, password: password);
   }
 
+  Future<void> resetPassword({required String email}) {
+    return _client.auth.resetPasswordForEmail(email);
+  }
+
   Future<void> signOut() {
     return _client.auth.signOut();
   }

@@ -53,20 +53,22 @@ class _AuthPageState extends ConsumerState<AuthPage> {
 
     final email = _emailController.text.trim();
     final password = _passwordController.text;
+    final username = ref.read(usernameProvider.notifier);
+    final authFormNotifier = ref.read(authFormProvider.notifier);
 
     try {
       if (authForm.isLocalMode) {
-        await ref.read(usernameProvider.notifier).setUsername(email);
+        await username.setUsername(email);
         return;
       }
 
-      ref.read(authFormProvider.notifier).setSubmitting(true);
+      authFormNotifier.setSubmitting(true);
 
       final auth = ref.read(authRepositoryProvider);
       if (authForm.isLoginMode) {
         await auth.signIn(email: email, password: password);
-        final username = auth.currentUser?.email ?? email;
-        await ref.read(usernameProvider.notifier).setUsername(username);
+        final usernameValue = auth.currentUser?.email ?? email;
+        await username.setUsername(usernameValue);
       } else {
         await auth.signUp(email: email, password: password);
       }
@@ -96,7 +98,64 @@ class _AuthPageState extends ConsumerState<AuthPage> {
       );
     } finally {
       if (mounted) {
-        ref.read(authFormProvider.notifier).setSubmitting(false);
+        authFormNotifier.setSubmitting(false);
+      }
+    }
+  }
+
+  Future<void> _forgotPassword() async {
+    final l10n = AppLocalizations.of(context);
+    final authForm = ref.read(authFormProvider);
+    if (authForm.isSubmitting) {
+      return;
+    }
+
+    final email = _emailController.text.trim();
+    if (email.isEmpty) {
+      setState(() {
+        _emailError = l10n.text('auth.emailRequired');
+      });
+      return;
+    }
+
+    if (!email.contains('@')) {
+      setState(() {
+        _emailError = l10n.text('auth.emailInvalid');
+      });
+      return;
+    }
+
+    final auth = ref.read(authRepositoryProvider);
+    final authFormNotifier = ref.read(authFormProvider.notifier);
+
+    try {
+      authFormNotifier.setSubmitting(true);
+      await auth.resetPassword(email: email);
+
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.text('auth.resetPasswordSuccess'))),
+      );
+    } on AuthException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.message)));
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.text('auth.unexpectedError'))),
+      );
+    } finally {
+      if (mounted) {
+        authFormNotifier.setSubmitting(false);
       }
     }
   }
@@ -275,8 +334,36 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                                     });
                                   },
                                 ),
+                                if (authForm.isLoginMode) ...[
+                                  const SizedBox(height: 2),
+                                  Align(
+                                    alignment: Alignment.centerRight,
+                                    child: TextButton(
+                                      style: TextButton.styleFrom(
+                                        minimumSize: const Size(0, 36),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 4,
+                                        ),
+                                        tapTargetSize:
+                                            MaterialTapTargetSize.shrinkWrap,
+                                      ),
+                                      onPressed: authForm.isSubmitting
+                                          ? null
+                                          : _forgotPassword,
+                                      child: Text(
+                                        l10n.text('auth.forgotPassword'),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ],
-                              const SizedBox(height: 32),
+                              SizedBox(
+                                height:
+                                    authForm.isLoginMode &&
+                                        !authForm.isLocalMode
+                                    ? 18
+                                    : 28,
+                              ),
                               AppButton(
                                 label: authForm.isSubmitting
                                     ? l10n.text('auth.pleaseWait')
@@ -286,9 +373,17 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                                     ? null
                                     : _submit,
                               ),
-                              const SizedBox(height: 8),
+                              const SizedBox(height: 10),
                               if (!authForm.isLocalMode)
                                 TextButton(
+                                  style: TextButton.styleFrom(
+                                    minimumSize: const Size(0, 40),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                    ),
+                                    tapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
+                                  ),
                                   onPressed: authForm.isSubmitting
                                       ? null
                                       : () {
@@ -390,59 +485,60 @@ class _AccountChoiceTile extends ConsumerWidget {
 
     return AspectRatio(
       aspectRatio: 1,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(8),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              border: Border.all(color: borderColor.withValues(alpha: 0.55)),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final tileSize = constraints.maxHeight;
+          final padding = tileSize < 148 ? 10.0 : 12.0;
+          final iconSize = (tileSize * 0.28).clamp(36.0, 48.0);
+
+          return Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onTap,
               borderRadius: BorderRadius.circular(8),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(icon, color: accentColor, size: 48),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    height: _lineHeight(context, titleStyle, 2),
-                    child: Center(
-                      child: Text(
-                        title,
-                        textAlign: TextAlign.center,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: titleStyle,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: borderColor.withValues(alpha: 0.55),
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Padding(
+                  padding: EdgeInsets.all(padding),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(icon, color: accentColor, size: iconSize),
+                      const SizedBox(height: 2),
+                      Flexible(
+                        child: Center(
+                          child: Text(
+                            title,
+                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: titleStyle,
+                          ),
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: 2),
+                      Flexible(
+                        child: Text(
+                          subtitle,
+                          textAlign: TextAlign.center,
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          style: descriptionStyle,
+                        ),
+                      ),
+                    ],
                   ),
-                  SizedBox(
-                    height: _lineHeight(context, descriptionStyle, 3),
-                    child: Text(
-                      subtitle,
-                      textAlign: TextAlign.center,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                      style: descriptionStyle,
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
-  }
-
-  double _lineHeight(BuildContext context, TextStyle? style, int lines) {
-    final effectiveStyle = DefaultTextStyle.of(context).style.merge(style);
-    final fontSize = effectiveStyle.fontSize ?? 14;
-    final height = effectiveStyle.height ?? 1;
-
-    return fontSize * height * lines;
   }
 }

@@ -37,6 +37,18 @@ class MyApp extends ConsumerWidget {
     final appBackgroundColor = ref.watch(appBackgroundColorProvider);
     final appPrimaryTextColor = ref.watch(appPrimaryTextColorProvider);
     final appPrimaryColor = ref.watch(appPrimaryDefaultColorProvider);
+    const appFontFamily = 'IBM Plex Sans Condensed';
+
+    final lightTextTheme = ThemeData.light().textTheme.apply(
+      fontFamily: appFontFamily,
+      bodyColor: appPrimaryTextColor,
+      displayColor: appPrimaryTextColor,
+    );
+    final darkTextTheme = ThemeData.dark().textTheme.apply(
+      fontFamily: appFontFamily,
+      bodyColor: appPrimaryTextColor,
+      displayColor: appPrimaryTextColor,
+    );
 
     return MaterialApp(
       title: 'Expenses',
@@ -51,11 +63,9 @@ class MyApp extends ConsumerWidget {
       themeMode: ThemeMode.dark,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: appPrimaryColor),
+        fontFamily: appFontFamily,
         scaffoldBackgroundColor: appBackgroundColor,
-        textTheme: ThemeData.light().textTheme.apply(
-          bodyColor: appPrimaryTextColor,
-          displayColor: appPrimaryTextColor,
-        ),
+        textTheme: lightTextTheme,
       ),
       darkTheme: ThemeData(
         brightness: Brightness.dark,
@@ -63,11 +73,9 @@ class MyApp extends ConsumerWidget {
           seedColor: appPrimaryColor,
           brightness: Brightness.dark,
         ),
+        fontFamily: appFontFamily,
         scaffoldBackgroundColor: appBackgroundColor,
-        textTheme: ThemeData.dark().textTheme.apply(
-          bodyColor: appPrimaryTextColor,
-          displayColor: appPrimaryTextColor,
-        ),
+        textTheme: darkTextTheme,
       ),
       home: const AuthGate(),
     );

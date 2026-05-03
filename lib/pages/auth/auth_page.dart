@@ -23,6 +23,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
+  bool _isChoosingAccountType = true;
   String? _emailError;
   String? _passwordError;
 
@@ -100,6 +101,38 @@ class _AuthPageState extends ConsumerState<AuthPage> {
     }
   }
 
+  void _clearFormErrors() {
+    setState(() {
+      _emailError = null;
+      _passwordError = null;
+    });
+  }
+
+  void _showChoice() {
+    _clearFormErrors();
+    ref.read(authFormProvider.notifier).reset();
+    setState(() {
+      _isChoosingAccountType = true;
+    });
+  }
+
+  void _chooseOnlineAccount() {
+    _clearFormErrors();
+    ref.read(authFormProvider.notifier).reset();
+    setState(() {
+      _isChoosingAccountType = false;
+    });
+  }
+
+  void _chooseLocalAccount() {
+    _clearFormErrors();
+    ref.read(authFormProvider.notifier).reset();
+    ref.read(authFormProvider.notifier).toggleLocalMode();
+    setState(() {
+      _isChoosingAccountType = false;
+    });
+  }
+
   bool _validateInputs() {
     final l10n = AppLocalizations.of(context);
     final email = _emailController.text.trim();
@@ -142,6 +175,11 @@ class _AuthPageState extends ConsumerState<AuthPage> {
         : authForm.isLoginMode
         ? l10n.text('auth.loginTitle')
         : l10n.text('auth.registerTitle');
+    final buttonText = authForm.isLocalMode
+        ? l10n.text('auth.localButton')
+        : authForm.isLoginMode
+        ? l10n.text('auth.loginButton')
+        : l10n.text('auth.registerButton');
 
     return Scaffold(
       body: SafeArea(
@@ -164,111 +202,109 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                         ),
                       ),
                       const SizedBox(height: 32),
-                      AppCard(
-                        title: title,
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            AppTextInput(
-                              controller: _emailController,
-                              label: authForm.isLocalMode
-                                  ? l10n.text('auth.usernameLabel')
-                                  : l10n.text('auth.emailLabel'),
-                              placeholder: authForm.isLocalMode
-                                  ? l10n.text('auth.usernamePlaceholder')
-                                  : l10n.text('auth.emailPlaceholder'),
-                              keyboardType: authForm.isLocalMode
-                                  ? TextInputType.text
-                                  : TextInputType.emailAddress,
-                              textInputAction: authForm.isLocalMode
-                                  ? TextInputAction.done
-                                  : TextInputAction.next,
-                              textCapitalization: TextCapitalization.none,
-                              autocorrect: false,
-                              enableSuggestions: false,
-                              errorText: _emailError,
-                              onSubmitted: authForm.isLocalMode
-                                  ? (_) => _submit()
-                                  : null,
-                              onChanged: (_) {
-                                if (_emailError == null) {
-                                  return;
-                                }
-                                setState(() {
-                                  _emailError = null;
-                                });
-                              },
-                            ),
-                            if (!authForm.isLocalMode) ...[
-                              const SizedBox(height: 12),
+                      if (_isChoosingAccountType)
+                        _AccountChoiceCard(
+                          onOnlineSelected: _chooseOnlineAccount,
+                          onLocalSelected: _chooseLocalAccount,
+                        )
+                      else
+                        AppCard(
+                          title: title,
+                          titleLeading: IconButton(
+                            tooltip: l10n.text('auth.backToAccountChoice'),
+                            visualDensity: VisualDensity.compact,
+                            onPressed: authForm.isSubmitting
+                                ? null
+                                : _showChoice,
+                            icon: const Icon(Icons.arrow_back),
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
                               AppTextInput(
-                                controller: _passwordController,
-                                label: l10n.text('auth.passwordLabel'),
-                                placeholder: l10n.text(
-                                  'auth.passwordPlaceholder',
-                                ),
-                                obscureText: true,
-                                textInputAction: TextInputAction.done,
+                                controller: _emailController,
+                                label: authForm.isLocalMode
+                                    ? l10n.text('auth.usernameLabel')
+                                    : l10n.text('auth.emailLabel'),
+                                placeholder: authForm.isLocalMode
+                                    ? l10n.text('auth.usernamePlaceholder')
+                                    : l10n.text('auth.emailPlaceholder'),
+                                keyboardType: authForm.isLocalMode
+                                    ? TextInputType.text
+                                    : TextInputType.emailAddress,
+                                textInputAction: authForm.isLocalMode
+                                    ? TextInputAction.done
+                                    : TextInputAction.next,
                                 textCapitalization: TextCapitalization.none,
                                 autocorrect: false,
                                 enableSuggestions: false,
-                                errorText: _passwordError,
-                                onSubmitted: (_) => _submit(),
+                                errorText: _emailError,
+                                onSubmitted: authForm.isLocalMode
+                                    ? (_) => _submit()
+                                    : null,
                                 onChanged: (_) {
-                                  if (_passwordError == null) {
+                                  if (_emailError == null) {
                                     return;
                                   }
                                   setState(() {
-                                    _passwordError = null;
+                                    _emailError = null;
                                   });
                                 },
                               ),
-                            ],
-                            const SizedBox(height: 32),
-                            AppButton(
-                              label: authForm.isSubmitting
-                                  ? l10n.text('auth.pleaseWait')
-                                  : title,
-                              isLoading: authForm.isSubmitting,
-                              onPressed: authForm.isSubmitting ? null : _submit,
-                            ),
-                            const SizedBox(height: 8),
-                            if (!authForm.isLocalMode)
-                              TextButton(
+                              if (!authForm.isLocalMode) ...[
+                                const SizedBox(height: 12),
+                                AppTextInput(
+                                  controller: _passwordController,
+                                  label: l10n.text('auth.passwordLabel'),
+                                  placeholder: l10n.text(
+                                    'auth.passwordPlaceholder',
+                                  ),
+                                  obscureText: true,
+                                  textInputAction: TextInputAction.done,
+                                  textCapitalization: TextCapitalization.none,
+                                  autocorrect: false,
+                                  enableSuggestions: false,
+                                  errorText: _passwordError,
+                                  onSubmitted: (_) => _submit(),
+                                  onChanged: (_) {
+                                    if (_passwordError == null) {
+                                      return;
+                                    }
+                                    setState(() {
+                                      _passwordError = null;
+                                    });
+                                  },
+                                ),
+                              ],
+                              const SizedBox(height: 32),
+                              AppButton(
+                                label: authForm.isSubmitting
+                                    ? l10n.text('auth.pleaseWait')
+                                    : buttonText,
+                                isLoading: authForm.isSubmitting,
                                 onPressed: authForm.isSubmitting
                                     ? null
-                                    : () {
-                                        ref
-                                            .read(authFormProvider.notifier)
-                                            .toggleMode();
-                                      },
-                                child: Text(
-                                  authForm.isLoginMode
-                                      ? l10n.text('auth.registerPrompt')
-                                      : l10n.text('auth.loginPrompt'),
+                                    : _submit,
+                              ),
+                              const SizedBox(height: 8),
+                              if (!authForm.isLocalMode)
+                                TextButton(
+                                  onPressed: authForm.isSubmitting
+                                      ? null
+                                      : () {
+                                          ref
+                                              .read(authFormProvider.notifier)
+                                              .toggleMode();
+                                        },
+                                  child: Text(
+                                    authForm.isLoginMode
+                                        ? l10n.text('auth.registerPrompt')
+                                        : l10n.text('auth.loginPrompt'),
+                                  ),
                                 ),
-                              ),
-                            TextButton(
-                              onPressed: authForm.isSubmitting
-                                  ? null
-                                  : () {
-                                      setState(() {
-                                        _emailError = null;
-                                        _passwordError = null;
-                                      });
-                                      ref
-                                          .read(authFormProvider.notifier)
-                                          .toggleLocalMode();
-                                    },
-                              child: Text(
-                                authForm.isLocalMode
-                                    ? l10n.text('auth.credentialsPrompt')
-                                    : l10n.text('auth.localPrompt'),
-                              ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
                     ],
                   ),
                 ),
@@ -280,5 +316,133 @@ class _AuthPageState extends ConsumerState<AuthPage> {
         ),
       ),
     );
+  }
+}
+
+class _AccountChoiceCard extends ConsumerWidget {
+  const _AccountChoiceCard({
+    required this.onOnlineSelected,
+    required this.onLocalSelected,
+  });
+
+  final VoidCallback onOnlineSelected;
+  final VoidCallback onLocalSelected;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+
+    return AppCard(
+      title: l10n.text('auth.accountChoiceTitle'),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: _AccountChoiceTile(
+              icon: Icons.cloud_outlined,
+              title: l10n.text('auth.onlineAccountTitle'),
+              subtitle: l10n.text('auth.onlineAccountDescription'),
+              onTap: onOnlineSelected,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _AccountChoiceTile(
+              icon: Icons.folder_outlined,
+              title: l10n.text('auth.localAccountTitle'),
+              subtitle: l10n.text('auth.localAccountDescription'),
+              onTap: onLocalSelected,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AccountChoiceTile extends ConsumerWidget {
+  const _AccountChoiceTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final textColor = ref.watch(appPrimaryTextColorProvider);
+    final accentColor = ref.watch(appPrimary100ColorProvider);
+    final borderColor = ref.watch(appPrimary300ColorProvider);
+    final titleStyle = Theme.of(context).textTheme.titleSmall?.copyWith(
+      color: textColor,
+      fontWeight: FontWeight.w700,
+    );
+    final descriptionStyle = Theme.of(context).textTheme.bodySmall?.copyWith(
+      color: textColor.withValues(alpha: 0.74),
+      fontSize: 11,
+      height: 1.2,
+    );
+
+    return AspectRatio(
+      aspectRatio: 1,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(8),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              border: Border.all(color: borderColor.withValues(alpha: 0.55)),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(icon, color: accentColor, size: 48),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    height: _lineHeight(context, titleStyle, 2),
+                    child: Center(
+                      child: Text(
+                        title,
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: titleStyle,
+                      ),
+                    ),
+                  ),
+                  SizedBox(
+                    height: _lineHeight(context, descriptionStyle, 3),
+                    child: Text(
+                      subtitle,
+                      textAlign: TextAlign.center,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: descriptionStyle,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  double _lineHeight(BuildContext context, TextStyle? style, int lines) {
+    final effectiveStyle = DefaultTextStyle.of(context).style.merge(style);
+    final fontSize = effectiveStyle.fontSize ?? 14;
+    final height = effectiveStyle.height ?? 1;
+
+    return fontSize * height * lines;
   }
 }

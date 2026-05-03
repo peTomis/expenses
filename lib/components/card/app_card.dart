@@ -8,6 +8,7 @@ class AppCard extends ConsumerWidget {
     required this.title,
     required this.child,
     super.key,
+    this.titleLeading,
     this.maxWidth = 420,
     this.padding = const EdgeInsets.all(20),
     this.elevation = 2,
@@ -15,6 +16,7 @@ class AppCard extends ConsumerWidget {
 
   final String title;
   final Widget child;
+  final Widget? titleLeading;
   final double maxWidth;
   final EdgeInsetsGeometry padding;
   final double elevation;
@@ -34,10 +36,22 @@ class AppCard extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.headlineSmall,
+              Stack(
+                alignment: Alignment.center,
+                children: [
+                  if (titleLeading != null)
+                    Align(alignment: Alignment.centerLeft, child: titleLeading),
+                  Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: titleLeading == null ? 0 : 48,
+                    ),
+                    child: Text(
+                      title,
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.headlineSmall,
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 20),
               child,

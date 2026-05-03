@@ -1,7 +1,10 @@
 {
   "auth.loginTitle": "Login",
   "auth.registerTitle": "Register",
-  "auth.localTitle": "Local login",
+  "auth.localTitle": "Choose an username",
+  "auth.loginButton": "Login",
+  "auth.registerButton": "Register",
+  "auth.localButton": "Continue",
   "auth.registerSuccess": "Registered successfully. Check your email if confirmation is required.",
   "auth.unexpectedError": "Unexpected error. Please try again.",
   "auth.emailRequired": "Email is required.",
@@ -15,8 +18,14 @@
   "auth.passwordLabel": "Password",
   "auth.passwordPlaceholder": "********",
   "auth.pleaseWait": "Please wait...",
+  "auth.accountChoiceTitle": "Choose account type",
+  "auth.onlineAccountTitle": "Online account",
+  "auth.onlineAccountDescription": "Sign in or register with email and password.",
+  "auth.localAccountTitle": "Local account",
+  "auth.localAccountDescription": "Keep data on this device, still syncable with your personal cloud.",
+  "auth.backToAccountChoice": "Back to account choice",
   "auth.registerPrompt": "Need an account? Register",
   "auth.loginPrompt": "Already have an account? Login",
-  "auth.localPrompt": "Keep everything local",
+  "auth.localPrompt": "I don't want an account",
   "auth.credentialsPrompt": "Use email login"
 }

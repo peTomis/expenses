@@ -9,6 +9,12 @@ class AppCard extends ConsumerWidget {
     super.key,
     this.title,
     this.titleLeading,
+    this.titleIcon,
+    this.titleTrailing,
+    this.titleStyle,
+    this.titleColor,
+    this.titleIconColor,
+    this.titleSpacing = 20,
     this.maxWidth = 420,
     this.padding = const EdgeInsets.all(20),
     this.elevation = 2,
@@ -18,6 +24,12 @@ class AppCard extends ConsumerWidget {
   final String? title;
   final Widget child;
   final Widget? titleLeading;
+  final IconData? titleIcon;
+  final Widget? titleTrailing;
+  final TextStyle? titleStyle;
+  final Color? titleColor;
+  final Color? titleIconColor;
+  final double titleSpacing;
   final double maxWidth;
   final EdgeInsetsGeometry padding;
   final double elevation;
@@ -27,6 +39,15 @@ class AppCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final cardBackgroundColor =
         backgroundColor ?? ref.watch(widgetBackgroundColorProvider);
+    final resolvedTitleStyle =
+        (titleStyle ?? Theme.of(context).textTheme.headlineSmall)?.copyWith(
+          color: titleColor,
+        );
+    final hasHeader =
+        title != null ||
+        titleLeading != null ||
+        titleIcon != null ||
+        titleTrailing != null;
 
     return ConstrainedBox(
       constraints: BoxConstraints(maxWidth: maxWidth),
@@ -40,28 +61,39 @@ class AppCard extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (title != null) ...[
-                Stack(
-                  alignment: Alignment.center,
+              if (hasHeader) ...[
+                Row(
                   children: [
-                    if (titleLeading != null)
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: titleLeading,
+                    if (titleLeading != null) ...[
+                      titleLeading!,
+                      const SizedBox(width: 8),
+                    ],
+                    if (titleIcon != null) ...[
+                      Icon(
+                        titleIcon,
+                        color: titleIconColor ?? titleColor,
+                        size: 22,
                       ),
-                    Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: titleLeading == null ? 0 : 48,
-                      ),
-                      child: Text(
-                        title!,
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.headlineSmall,
-                      ),
-                    ),
+                      const SizedBox(width: 8),
+                    ],
+                    if (title != null)
+                      Expanded(
+                        child: Text(
+                          title!,
+                          textAlign: TextAlign.start,
+                          overflow: TextOverflow.ellipsis,
+                          style: resolvedTitleStyle,
+                        ),
+                      )
+                    else
+                      const Spacer(),
+                    if (titleTrailing != null) ...[
+                      const SizedBox(width: 12),
+                      titleTrailing!,
+                    ],
                   ],
                 ),
-                const SizedBox(height: 20),
+                SizedBox(height: titleSpacing),
               ],
               child,
             ],

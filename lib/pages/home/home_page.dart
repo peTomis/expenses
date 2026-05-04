@@ -238,18 +238,23 @@ class _BalanceCard extends ConsumerWidget {
 
     return AppCard(
       backgroundColor: backgroundColor,
+      title: title,
+      titleIcon: Icons.payments_outlined,
+      titleIconColor: accentColor,
+      titleColor: textColor,
+      titleStyle: Theme.of(
+        context,
+      ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+      titleSpacing: 8,
+      titleTrailing: _BalanceCardActions(
+        titleAction: titleAction,
+        percentage: _monthlyBalanceChangePercentage(monthlyData),
+        percentageBackgroundColor: accentColor,
+        percentageTextColor: backgroundColor,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _BalanceCardHeader(
-            title: title,
-            titleAction: titleAction,
-            changePercentage: _monthlyBalanceChangePercentage(monthlyData),
-            iconColor: accentColor,
-            textColor: textColor,
-            percentageTextColor: backgroundColor,
-          ),
-          const SizedBox(height: 8),
           _BalanceAmount(
             amount: balance,
             currencySymbol: currencySymbol,
@@ -266,49 +271,28 @@ class _BalanceCard extends ConsumerWidget {
   }
 }
 
-class _BalanceCardHeader extends StatelessWidget {
-  const _BalanceCardHeader({
-    required this.title,
-    required this.changePercentage,
-    required this.iconColor,
-    required this.textColor,
+class _BalanceCardActions extends StatelessWidget {
+  const _BalanceCardActions({
+    required this.percentage,
+    required this.percentageBackgroundColor,
     required this.percentageTextColor,
     this.titleAction,
   });
 
-  final String title;
-  final double changePercentage;
-  final Color iconColor;
-  final Color textColor;
-  final Color percentageTextColor;
   final Widget? titleAction;
+  final double percentage;
+  final Color percentageBackgroundColor;
+  final Color percentageTextColor;
 
   @override
   Widget build(BuildContext context) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.payments_outlined, color: iconColor, size: 22),
-            const SizedBox(width: 8),
-            Text(
-              title,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: textColor,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            if (titleAction != null) ...[
-              const SizedBox(width: 8),
-              titleAction!,
-            ],
-          ],
-        ),
+        if (titleAction != null) ...[titleAction!, const SizedBox(width: 8)],
         _BalanceChangePill(
-          percentage: changePercentage,
-          backgroundColor: iconColor,
+          percentage: percentage,
+          backgroundColor: percentageBackgroundColor,
           textColor: percentageTextColor,
         ),
       ],

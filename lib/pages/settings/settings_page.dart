@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../components/card/app_card.dart';
 import '../../components/dev_logo/dev_logo.dart';
 import '../../components/select/app_select.dart';
 import '../../providers/color_provider.dart';
@@ -54,7 +55,6 @@ class SettingsContent extends ConsumerWidget {
     final financialData = ref.watch(financialDataProvider);
     final selectedCurrency = financialData.accountData.currency;
     final textColor = ref.watch(appPrimaryTextColorProvider);
-    final surfaceColor = ref.watch(widgetBackgroundColorProvider);
 
     return SafeArea(
       bottom: false,
@@ -83,61 +83,40 @@ class SettingsContent extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: 24),
-                  DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: surfaceColor,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: textColor.withValues(alpha: 0.14),
-                      ),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        children: [
-                          Icon(Icons.person, color: textColor),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              username ?? user?.email ?? 'Unknown user',
-                              style: Theme.of(context).textTheme.bodyMedium,
-                            ),
+                  AppCard(
+                    maxWidth: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        Icon(Icons.person, color: textColor),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            username ?? user?.email ?? 'Unknown user',
+                            style: Theme.of(context).textTheme.bodyMedium,
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 12),
                   _SettingsSection(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(Icons.payments_outlined, color: textColor),
-                            const SizedBox(width: 12),
-                            Text(
-                              'Currency',
-                              style: Theme.of(context).textTheme.bodyMedium,
+                    title: 'Currency',
+                    titleIcon: Icons.payments_outlined,
+                    titleColor: textColor,
+                    child: AppSelect<CurrencyData>(
+                      value: selectedCurrency,
+                      items: CurrencyData.supportedCurrencies
+                          .map(
+                            (currency) => AppSelectItem(
+                              value: currency,
+                              label: currency.label,
                             ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        AppSelect<CurrencyData>(
-                          value: selectedCurrency,
-                          items: CurrencyData.supportedCurrencies
-                              .map(
-                                (currency) => AppSelectItem(
-                                  value: currency,
-                                  label: currency.label,
-                                ),
-                              )
-                              .toList(),
-                          onChanged: ref
-                              .read(financialDataProvider.notifier)
-                              .setCurrency,
-                        ),
-                      ],
+                          )
+                          .toList(),
+                      onChanged: ref
+                          .read(financialDataProvider.notifier)
+                          .setCurrency,
                     ),
                   ),
                   const Spacer(),
@@ -158,23 +137,30 @@ class SettingsContent extends ConsumerWidget {
   }
 }
 
-class _SettingsSection extends ConsumerWidget {
-  const _SettingsSection({required this.child});
+class _SettingsSection extends StatelessWidget {
+  const _SettingsSection({
+    required this.child,
+    this.title,
+    this.titleIcon,
+    this.titleColor,
+  });
 
   final Widget child;
+  final String? title;
+  final IconData? titleIcon;
+  final Color? titleColor;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final textColor = ref.watch(appPrimaryTextColorProvider);
-    final surfaceColor = ref.watch(widgetBackgroundColorProvider);
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: surfaceColor,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: textColor.withValues(alpha: 0.14)),
-      ),
-      child: Padding(padding: const EdgeInsets.all(16), child: child),
+  Widget build(BuildContext context) {
+    return AppCard(
+      maxWidth: double.infinity,
+      padding: const EdgeInsets.all(16),
+      title: title,
+      titleIcon: titleIcon,
+      titleColor: titleColor,
+      titleIconColor: titleColor,
+      titleStyle: Theme.of(context).textTheme.bodyMedium,
+      child: child,
     );
   }
 }

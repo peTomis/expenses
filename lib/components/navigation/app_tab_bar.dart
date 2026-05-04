@@ -35,6 +35,8 @@ class AppTabBar extends ConsumerWidget {
     final textColor = ref.watch(appPrimaryTextColorProvider);
     final selectedColor = ref.watch(appPrimary300ColorProvider);
     final surfaceColor = ref.watch(widgetBackgroundColorProvider);
+    final tabBarWidth = items.length * _AppTabBarButton.itemWidth;
+    final tabBarHeight = _AppTabBarButton.itemHeight + _tabBarPadding * 2;
 
     return SafeArea(
       top: false,
@@ -42,40 +44,54 @@ class AppTabBar extends ConsumerWidget {
         padding: EdgeInsets.fromLTRB(20, 8, 20, kIsWeb ? 24 : 8),
         child: Align(
           alignment: Alignment.bottomCenter,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(999),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: surfaceColor.withValues(alpha: 0.72),
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.12),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.26),
-                      blurRadius: 24,
-                      offset: const Offset(0, 12),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 392),
+            child: SizedBox(
+              width: tabBarWidth + _tabBarPadding * 2,
+              height: tabBarHeight,
+              child: Stack(
+                clipBehavior: Clip.none,
+                alignment: Alignment.bottomCenter,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(999),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: surfaceColor.withValues(alpha: 0.72),
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.12),
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.26),
+                              blurRadius: 24,
+                              offset: const Offset(0, 12),
+                            ),
+                          ],
+                        ),
+                        child: const SizedBox.expand(),
+                      ),
                     ),
-                  ],
-                ),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 392),
-                  child: Padding(
-                    padding: const EdgeInsets.all(8),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(_tabBarPadding),
                     child: SizedBox(
-                      width: items.length * _AppTabBarButton.itemWidth,
+                      width: tabBarWidth,
                       height: _AppTabBarButton.itemHeight,
                       child: Stack(
+                        clipBehavior: Clip.none,
                         children: [
                           AnimatedPositioned(
                             duration: const Duration(milliseconds: 280),
                             curve: Curves.easeOutBack,
                             left:
                                 selectedIndex * _AppTabBarButton.itemWidth +
-                                _AppTabBarButton.horizontalInset,
+                                (_AppTabBarButton.itemWidth -
+                                        _AppTabBarButton.itemHeight) /
+                                    2,
                             top: 0,
                             child: _SelectedTabBubble(color: selectedColor),
                           ),
@@ -94,7 +110,7 @@ class AppTabBar extends ConsumerWidget {
                       ),
                     ),
                   ),
-                ),
+                ],
               ),
             ),
           ),
@@ -114,7 +130,6 @@ class _AppTabBarButton extends StatelessWidget {
 
   static const double itemWidth = 56;
   static const double itemHeight = 52;
-  static const double horizontalInset = 2;
 
   final AppTabBarItem item;
   final bool isSelected;
@@ -157,6 +172,8 @@ class _AppTabBarButton extends StatelessWidget {
     );
   }
 }
+
+const _tabBarPadding = 8.0;
 
 class _SelectedTabBubble extends StatelessWidget {
   const _SelectedTabBubble({required this.color});

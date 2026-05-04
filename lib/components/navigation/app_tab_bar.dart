@@ -24,7 +24,7 @@ class AppTabBar extends ConsumerWidget {
     required this.selectedIndex,
     required this.onSelected,
     super.key,
-  });
+  }) : assert(items.length > 0, 'AppTabBar requires at least one item.');
 
   final List<AppTabBarItem> items;
   final int selectedIndex;
@@ -37,6 +37,7 @@ class AppTabBar extends ConsumerWidget {
     final surfaceColor = ref.watch(widgetBackgroundColorProvider);
     final tabBarWidth = items.length * _AppTabBarButton.itemWidth;
     final tabBarHeight = _AppTabBarButton.itemHeight + _tabBarPadding * 2;
+    final effectiveSelectedIndex = selectedIndex.clamp(0, items.length - 1);
 
     return SafeArea(
       top: false,
@@ -54,13 +55,13 @@ class AppTabBar extends ConsumerWidget {
                 alignment: Alignment.bottomCenter,
                 children: [
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(999),
+                    borderRadius: _tabBarRadius,
                     child: BackdropFilter(
                       filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
                       child: DecoratedBox(
                         decoration: BoxDecoration(
                           color: surfaceColor.withValues(alpha: 0.72),
-                          borderRadius: BorderRadius.circular(999),
+                          borderRadius: _tabBarRadius,
                           border: Border.all(
                             color: Colors.white.withValues(alpha: 0.12),
                           ),
@@ -88,7 +89,8 @@ class AppTabBar extends ConsumerWidget {
                             duration: const Duration(milliseconds: 280),
                             curve: Curves.easeOutBack,
                             left:
-                                selectedIndex * _AppTabBarButton.itemWidth +
+                                effectiveSelectedIndex *
+                                    _AppTabBarButton.itemWidth +
                                 (_AppTabBarButton.itemWidth -
                                         _AppTabBarButton.itemHeight) /
                                     2,
@@ -100,7 +102,8 @@ class AppTabBar extends ConsumerWidget {
                               for (final indexedItem in items.indexed)
                                 _AppTabBarButton(
                                   item: indexedItem.$2,
-                                  isSelected: indexedItem.$1 == selectedIndex,
+                                  isSelected:
+                                      indexedItem.$1 == effectiveSelectedIndex,
                                   textColor: textColor,
                                   onTap: () => onSelected(indexedItem.$1),
                                 ),
@@ -174,6 +177,7 @@ class _AppTabBarButton extends StatelessWidget {
 }
 
 const _tabBarPadding = 8.0;
+const _tabBarRadius = BorderRadius.all(Radius.circular(999));
 
 class _SelectedTabBubble extends StatelessWidget {
   const _SelectedTabBubble({required this.color});

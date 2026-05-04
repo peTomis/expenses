@@ -47,15 +47,20 @@ class _AppTextInputState extends ConsumerState<AppTextInput> {
   void initState() {
     super.initState();
     _focusNode = FocusNode();
-    _focusNode.addListener(() {
-      setState(() {});
-    });
+    _focusNode.addListener(_handleFocusChanged);
   }
 
   @override
   void dispose() {
+    _focusNode.removeListener(_handleFocusChanged);
     _focusNode.dispose();
     super.dispose();
+  }
+
+  void _handleFocusChanged() {
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   @override
@@ -70,14 +75,7 @@ class _AppTextInputState extends ConsumerState<AppTextInput> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          widget.label,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: textColor,
-          ),
-        ),
+        _InputLabel(label: widget.label, color: textColor),
         const SizedBox(height: 8),
         CupertinoTextField(
           controller: widget.controller,
@@ -100,35 +98,70 @@ class _AppTextInputState extends ConsumerState<AppTextInput> {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
             color: inputBackground,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: _inputBorderRadius,
             border: Border.all(
-              color: hasError
-                  ? Colors.redAccent
-                  : _focusNode.hasFocus
-                  ? textColor
-                  : textColor.withValues(alpha: 0.45),
-              width: 1,
+              color: _borderColor(
+                hasError: hasError,
+                hasFocus: _focusNode.hasFocus,
+                textColor: textColor,
+              ),
             ),
           ),
         ),
-        if (hasError) ...[
+        if (hasError || _hasDescription) ...[
           const SizedBox(height: 6),
-          Text(
-            widget.errorText!,
-            style: const TextStyle(fontSize: 12, color: Colors.redAccent),
-          ),
-        ] else if (widget.description != null &&
-            widget.description!.isNotEmpty) ...[
-          const SizedBox(height: 6),
-          Text(
-            widget.description!,
-            style: TextStyle(
-              fontSize: 12,
-              color: textColor.withValues(alpha: 0.75),
-            ),
+          _InputHelperText(
+            text: hasError ? widget.errorText! : widget.description!,
+            color: hasError
+                ? Colors.redAccent
+                : textColor.withValues(alpha: 0.75),
           ),
         ],
       ],
     );
+  }
+
+  bool get _hasDescription =>
+      widget.description != null && widget.description!.isNotEmpty;
+
+  Color _borderColor({
+    required bool hasError,
+    required bool hasFocus,
+    required Color textColor,
+  }) {
+    if (hasError) {
+      return Colors.redAccent;
+    }
+
+    return hasFocus ? textColor : textColor.withValues(alpha: 0.45);
+  }
+}
+
+const _inputBorderRadius = BorderRadius.all(Radius.circular(8));
+
+class _InputLabel extends StatelessWidget {
+  const _InputLabel({required this.label, required this.color});
+
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      label,
+      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: color),
+    );
+  }
+}
+
+class _InputHelperText extends StatelessWidget {
+  const _InputHelperText({required this.text, required this.color});
+
+  final String text;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(text, style: TextStyle(fontSize: 12, color: color));
   }
 }

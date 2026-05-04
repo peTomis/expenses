@@ -246,11 +246,11 @@ class _BalanceCard extends ConsumerWidget {
         context,
       ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
       titleSpacing: 8,
-      titleTrailing: _BalanceCardActions(
-        titleAction: titleAction,
+      titleTicker: titleAction,
+      titleTrailing: _BalanceChangePill(
         percentage: _monthlyBalanceChangePercentage(monthlyData),
-        percentageBackgroundColor: accentColor,
-        percentageTextColor: backgroundColor,
+        backgroundColor: accentColor,
+        textColor: backgroundColor,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -267,35 +267,6 @@ class _BalanceCard extends ConsumerWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _BalanceCardActions extends StatelessWidget {
-  const _BalanceCardActions({
-    required this.percentage,
-    required this.percentageBackgroundColor,
-    required this.percentageTextColor,
-    this.titleAction,
-  });
-
-  final Widget? titleAction;
-  final double percentage;
-  final Color percentageBackgroundColor;
-  final Color percentageTextColor;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (titleAction != null) ...[titleAction!, const SizedBox(width: 8)],
-        _BalanceChangePill(
-          percentage: percentage,
-          backgroundColor: percentageBackgroundColor,
-          textColor: percentageTextColor,
-        ),
-      ],
     );
   }
 }

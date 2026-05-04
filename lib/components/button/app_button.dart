@@ -28,45 +28,38 @@ class AppButton extends ConsumerWidget {
         .withValues(alpha: 0.45);
 
     final enabled = onPressed != null && !isLoading;
-
-    final child = AnimatedOpacity(
-      duration: const Duration(milliseconds: 120),
-      opacity: enabled ? 1 : 0.65,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: enabled ? fillColor : disabledColor,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: fillColor, width: 1),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          child: Center(
-            child: isLoading
-                ? SizedBox(
-                    height: 18,
-                    width: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: textColor,
-                    ),
-                  )
-                : Text(
-                    label,
-                    style: TextStyle(
-                      color: textColor,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
+    final button = Semantics(
+      button: true,
+      enabled: enabled,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: _borderRadius,
+        child: InkWell(
+          onTap: enabled ? onPressed : null,
+          borderRadius: _borderRadius,
+          child: AnimatedOpacity(
+            duration: _fadeDuration,
+            opacity: enabled ? 1 : 0.65,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: enabled ? fillColor : disabledColor,
+                borderRadius: _borderRadius,
+                border: Border.all(color: fillColor),
+              ),
+              child: Padding(
+                padding: _contentPadding,
+                child: Center(
+                  child: _AppButtonContent(
+                    isLoading: isLoading,
+                    label: label,
+                    textColor: textColor,
                   ),
+                ),
+              ),
+            ),
           ),
         ),
       ),
-    );
-
-    final button = InkWell(
-      onTap: enabled ? onPressed : null,
-      borderRadius: BorderRadius.circular(8),
-      child: child,
     );
 
     if (!expand) {
@@ -74,5 +67,41 @@ class AppButton extends ConsumerWidget {
     }
 
     return SizedBox(width: double.infinity, child: button);
+  }
+}
+
+const _borderRadius = BorderRadius.all(Radius.circular(8));
+const _contentPadding = EdgeInsets.symmetric(horizontal: 12, vertical: 10);
+const _fadeDuration = Duration(milliseconds: 120);
+
+class _AppButtonContent extends StatelessWidget {
+  const _AppButtonContent({
+    required this.isLoading,
+    required this.label,
+    required this.textColor,
+  });
+
+  final bool isLoading;
+  final String label;
+  final Color textColor;
+
+  @override
+  Widget build(BuildContext context) {
+    if (isLoading) {
+      return SizedBox(
+        height: 18,
+        width: 18,
+        child: CircularProgressIndicator(strokeWidth: 2, color: textColor),
+      );
+    }
+
+    return Text(
+      label,
+      style: TextStyle(
+        color: textColor,
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+      ),
+    );
   }
 }

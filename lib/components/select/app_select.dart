@@ -4,10 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/color_provider.dart';
 
 class AppSelectItem<T> {
-  const AppSelectItem({required this.value, required this.label});
+  const AppSelectItem({required this.value, required this.label, this.icon});
 
   final T value;
   final String label;
+  final IconData? icon;
 }
 
 class AppSelect<T> extends ConsumerWidget {
@@ -26,6 +27,9 @@ class AppSelect<T> extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final textColor = ref.watch(appPrimaryTextColorProvider);
     final menuColor = ref.watch(appPrimary500ColorProvider);
+    final inputBackground = ref
+        .watch(appPrimary500ColorProvider)
+        .withValues(alpha: 0.5);
     final tapColor = ref.watch(appPrimary300ColorProvider);
     final selectedColor = ref.watch(appPrimary400ColorProvider);
     final selectedTextColor = ref.watch(appPrimary50ColorProvider);
@@ -72,34 +76,61 @@ class AppSelect<T> extends ConsumerWidget {
               child: Material(
                 color: Colors.transparent,
                 borderRadius: _borderRadius,
-                child: InkWell(
-                  onTap: controller.isOpen ? controller.close : controller.open,
-                  borderRadius: _borderRadius,
-                  overlayColor: WidgetStatePropertyAll(
-                    tapColor.withValues(alpha: 0.72),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: inputBackground,
+                    borderRadius: _borderRadius,
+                    border: Border.all(
+                      color: textColor.withValues(alpha: 0.45),
+                    ),
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            selectedItem.label,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(
-                                  color: textColor,
-                                  fontWeight: FontWeight.w600,
+                  child: InkWell(
+                    onTap: controller.isOpen
+                        ? controller.close
+                        : controller.open,
+                    borderRadius: _borderRadius,
+                    overlayColor: WidgetStatePropertyAll(
+                      tapColor.withValues(alpha: 0.72),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Row(
+                              children: [
+                                if (selectedItem.icon != null) ...[
+                                  Icon(
+                                    selectedItem.icon,
+                                    color: textColor,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 8),
+                                ],
+                                Expanded(
+                                  child: Text(
+                                    selectedItem.label,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(
+                                          color: textColor,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                  ),
                                 ),
+                              ],
+                            ),
                           ),
-                        ),
-                        Icon(
-                          controller.isOpen
-                              ? Icons.keyboard_arrow_up
-                              : Icons.keyboard_arrow_down,
-                          color: textColor,
-                        ),
-                      ],
+                          Icon(
+                            controller.isOpen
+                                ? Icons.keyboard_arrow_up
+                                : Icons.keyboard_arrow_down,
+                            color: textColor,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -173,7 +204,17 @@ class _SelectMenuItem<T> extends StatelessWidget {
         ),
         child: Align(
           alignment: Alignment.centerLeft,
-          child: Text(item.label, overflow: TextOverflow.ellipsis),
+          child: Row(
+            children: [
+              if (item.icon != null) ...[
+                Icon(item.icon, size: 20),
+                const SizedBox(width: 8),
+              ],
+              Expanded(
+                child: Text(item.label, overflow: TextOverflow.ellipsis),
+              ),
+            ],
+          ),
         ),
       ),
     );

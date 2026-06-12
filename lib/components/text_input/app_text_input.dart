@@ -77,33 +77,36 @@ class _AppTextInputState extends ConsumerState<AppTextInput> {
       children: [
         _InputLabel(label: widget.label, color: textColor),
         const SizedBox(height: 8),
-        CupertinoTextField(
-          controller: widget.controller,
-          focusNode: _focusNode,
-          keyboardType: widget.keyboardType,
-          obscureText: widget.obscureText,
-          textInputAction: widget.textInputAction,
-          textCapitalization: widget.textCapitalization,
-          autocorrect: widget.autocorrect,
-          enableSuggestions: widget.enableSuggestions,
-          onChanged: widget.onChanged,
-          onSubmitted: widget.onSubmitted,
-          cursorColor: textColor,
-          style: TextStyle(color: textColor, fontSize: 14),
-          placeholder: widget.placeholder,
-          placeholderStyle: TextStyle(
-            color: textColor.withValues(alpha: 0.55),
-            fontSize: 14,
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(
-            color: inputBackground,
-            borderRadius: _inputBorderRadius,
-            border: Border.all(
-              color: _borderColor(
-                hasError: hasError,
-                hasFocus: _focusNode.hasFocus,
-                textColor: textColor,
+        SizedBox(
+          height: _inputHeight,
+          child: CupertinoTextField(
+            controller: widget.controller,
+            focusNode: _focusNode,
+            keyboardType: widget.keyboardType,
+            obscureText: widget.obscureText,
+            textInputAction: widget.textInputAction,
+            textCapitalization: widget.textCapitalization,
+            autocorrect: widget.autocorrect,
+            enableSuggestions: widget.enableSuggestions,
+            onChanged: widget.onChanged,
+            onSubmitted: widget.onSubmitted,
+            cursorColor: textColor,
+            style: TextStyle(color: textColor, fontSize: 14),
+            placeholder: widget.placeholder,
+            placeholderStyle: TextStyle(
+              color: textColor.withValues(alpha: 0.55),
+              fontSize: 14,
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: inputBackground,
+              borderRadius: _inputBorderRadius,
+              border: Border.all(
+                color: _borderColor(
+                  hasError: hasError,
+                  hasFocus: _focusNode.hasFocus,
+                  textColor: textColor,
+                ),
               ),
             ),
           ),
@@ -138,6 +141,7 @@ class _AppTextInputState extends ConsumerState<AppTextInput> {
 }
 
 const _inputBorderRadius = BorderRadius.all(Radius.circular(8));
+const _inputHeight = 44.0;
 
 class _InputLabel extends StatelessWidget {
   const _InputLabel({required this.label, required this.color});

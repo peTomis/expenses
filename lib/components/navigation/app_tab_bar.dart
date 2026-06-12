@@ -24,11 +24,13 @@ class AppTabBar extends ConsumerWidget {
     required this.selectedIndex,
     required this.onSelected,
     super.key,
+    this.onDoubleSelected,
   }) : assert(items.length > 0, 'AppTabBar requires at least one item.');
 
   final List<AppTabBarItem> items;
   final int selectedIndex;
   final ValueChanged<int> onSelected;
+  final ValueChanged<int>? onDoubleSelected;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -106,6 +108,12 @@ class AppTabBar extends ConsumerWidget {
                                       indexedItem.$1 == effectiveSelectedIndex,
                                   textColor: textColor,
                                   onTap: () => onSelected(indexedItem.$1),
+                                  onDoubleTap:
+                                      onDoubleSelected == null ||
+                                          indexedItem.$1 !=
+                                              effectiveSelectedIndex
+                                      ? null
+                                      : () => onDoubleSelected!(indexedItem.$1),
                                 ),
                             ],
                           ),
@@ -129,6 +137,7 @@ class _AppTabBarButton extends StatelessWidget {
     required this.isSelected,
     required this.textColor,
     required this.onTap,
+    this.onDoubleTap,
   });
 
   static const double itemWidth = 56;
@@ -138,6 +147,7 @@ class _AppTabBarButton extends StatelessWidget {
   final bool isSelected;
   final Color textColor;
   final VoidCallback onTap;
+  final VoidCallback? onDoubleTap;
 
   @override
   Widget build(BuildContext context) {
@@ -154,6 +164,7 @@ class _AppTabBarButton extends StatelessWidget {
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: onTap,
+          onDoubleTap: onDoubleTap,
           child: SizedBox(
             width: itemWidth,
             height: itemHeight,

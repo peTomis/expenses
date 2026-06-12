@@ -19,21 +19,21 @@ final mockedMonthlyFinancialData = [
         amount: 3200,
         account: 1,
         merchant: 'Acme Payroll',
-        category: defaultCategories[0].uuid,
+        category: defaultCategories[7].uuid,
       ),
       FinancialDataEntry(
         timestamp: DateTime(2026, 3, 2),
         amount: -1200,
         account: 1,
         merchant: 'Rent',
-        category: defaultCategories[1].uuid,
+        category: defaultCategories[4].uuid,
       ),
       FinancialDataEntry(
         timestamp: DateTime(2026, 3, 4),
         amount: -185,
         account: 1,
         merchant: 'Market Lane',
-        category: defaultCategories[2].uuid,
+        category: defaultCategories[3].uuid,
       ),
       FinancialDataEntry(
         timestamp: DateTime(2026, 3, 8),
@@ -47,35 +47,35 @@ final mockedMonthlyFinancialData = [
         amount: -75,
         account: 1,
         merchant: 'Metro Pass',
-        category: defaultCategories[3].uuid,
+        category: defaultCategories[11].uuid,
       ),
       FinancialDataEntry(
         timestamp: DateTime(2026, 3, 18),
         amount: -95,
         account: 1,
         merchant: 'Caffe Roma',
-        category: defaultCategories[2].uuid,
+        category: defaultCategories[0].uuid,
       ),
       FinancialDataEntry(
         timestamp: DateTime(2026, 3, 22),
         amount: -210,
         account: 1,
         merchant: 'Insurance',
-        category: defaultCategories[4].uuid,
+        category: defaultCategories[1].uuid,
       ),
       FinancialDataEntry(
         timestamp: DateTime(2026, 3, 26),
         amount: -45,
         account: 1,
         merchant: 'Streaming',
-        category: defaultCategories[4].uuid,
+        category: defaultCategories[9].uuid,
       ),
       FinancialDataEntry(
         timestamp: DateTime(2026, 3, 29),
         amount: -200,
         account: 1,
         merchant: 'Trainline',
-        category: defaultCategories[3].uuid,
+        category: defaultCategories[11].uuid,
       ),
     ],
   ),
@@ -90,21 +90,21 @@ final mockedMonthlyFinancialData = [
         amount: 3200,
         account: 1,
         merchant: 'Acme Payroll',
-        category: defaultCategories[0].uuid,
+        category: defaultCategories[7].uuid,
       ),
       FinancialDataEntry(
         timestamp: DateTime(2026, 4, 2),
         amount: -1200,
         account: 1,
         merchant: 'Rent',
-        category: defaultCategories[1].uuid,
+        category: defaultCategories[4].uuid,
       ),
       FinancialDataEntry(
         timestamp: DateTime(2026, 4, 5),
         amount: -205,
         account: 1,
         merchant: 'Market Lane',
-        category: defaultCategories[2].uuid,
+        category: defaultCategories[3].uuid,
       ),
       FinancialDataEntry(
         timestamp: DateTime(2026, 4, 9),
@@ -118,42 +118,42 @@ final mockedMonthlyFinancialData = [
         amount: -70,
         account: 1,
         merchant: 'Metro Pass',
-        category: defaultCategories[3].uuid,
+        category: defaultCategories[11].uuid,
       ),
       FinancialDataEntry(
         timestamp: DateTime(2026, 4, 16),
         amount: -18,
         account: 1,
         merchant: 'Coffee Bar',
-        category: defaultCategories[2].uuid,
+        category: defaultCategories[0].uuid,
       ),
       FinancialDataEntry(
         timestamp: DateTime(2026, 4, 19),
         amount: -125,
         account: 1,
         merchant: 'Osteria Verde',
-        category: defaultCategories[2].uuid,
+        category: defaultCategories[0].uuid,
       ),
       FinancialDataEntry(
         timestamp: DateTime(2026, 4, 21),
         amount: 220,
         account: 1,
         merchant: 'Freelance Client',
-        category: defaultCategories[0].uuid,
+        category: defaultCategories[7].uuid,
       ),
       FinancialDataEntry(
         timestamp: DateTime(2026, 4, 24),
         amount: -210,
         account: 1,
         merchant: 'Insurance',
-        category: defaultCategories[4].uuid,
+        category: defaultCategories[1].uuid,
       ),
       FinancialDataEntry(
         timestamp: DateTime(2026, 4, 27),
         amount: -37,
         account: 1,
         merchant: 'Books',
-        category: defaultCategories[4].uuid,
+        category: defaultCategories[11].uuid,
       ),
     ],
   ),
@@ -195,6 +195,15 @@ class FinancialDataState {
       accountData: accountData ?? this.accountData,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'monthlyData': monthlyData
+          .map((monthData) => monthData.toJson())
+          .toList(),
+      'accountData': accountData.toJson(),
+    };
+  }
 }
 
 class MonthlyFinancialData {
@@ -227,6 +236,16 @@ class MonthlyFinancialData {
       data: data ?? this.data,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'month': month,
+      'year': year,
+      'expenses': expenses,
+      'income': income,
+      'data': data.map((entry) => entry.toJson()).toList(),
+    };
+  }
 }
 
 class FinancialDataEntry {
@@ -243,6 +262,16 @@ class FinancialDataEntry {
   final int account;
   final String merchant;
   final String? category;
+
+  Map<String, dynamic> toJson() {
+    return {
+      'timestamp': timestamp.toUtc().toIso8601String(),
+      'amount': amount,
+      'account': account,
+      'merchant': merchant,
+      'category': category,
+    };
+  }
 }
 
 class FinancialAccountData {
@@ -256,6 +285,10 @@ class FinancialAccountData {
       account: account ?? this.account,
       currency: currency ?? this.currency,
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {'account': account, 'currency': currency.toJson()};
   }
 }
 
@@ -271,6 +304,10 @@ class CurrencyData {
 
   String get label {
     return '$symbol $name';
+  }
+
+  Map<String, dynamic> toJson() {
+    return {'name': name, 'symbol': symbol};
   }
 }
 

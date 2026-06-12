@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -10,6 +12,7 @@ import '../../components/text_input/app_text_input.dart';
 import '../../providers/category_provider.dart';
 import '../../providers/color_provider.dart';
 import '../../providers/financial_data_provider.dart';
+import '../../providers/user_data_upload_provider.dart';
 import '../../providers/username_provider.dart';
 import '../auth/auth_providers.dart';
 
@@ -49,6 +52,29 @@ class SettingsContent extends ConsumerWidget {
     }
   }
 
+  Future<void> _uploadUserData(BuildContext context, WidgetRef ref) async {
+    final uploaded = await ref
+        .read(userDataUploadControllerProvider.notifier)
+        .uploadCurrent();
+
+    if (!context.mounted) {
+      return;
+    }
+
+    final uploadState = ref.read(userDataUploadControllerProvider);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          uploaded
+              ? 'sync'
+              : uploadState.status == UserDataUploadStatus.uploading
+              ? 'sync'
+              : 'sync issue',
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authRepositoryProvider).currentUser;
@@ -58,6 +84,7 @@ class SettingsContent extends ConsumerWidget {
     final financialData = ref.watch(financialDataProvider);
     final selectedCurrency = financialData.accountData.currency;
     final categories = ref.watch(categoryProvider);
+    final uploadState = ref.watch(userDataUploadControllerProvider);
     final textColor = ref.watch(appPrimaryTextColorProvider);
 
     return SafeArea(
@@ -90,16 +117,24 @@ class SettingsContent extends ConsumerWidget {
                   AppCard(
                     maxWidth: double.infinity,
                     padding: const EdgeInsets.all(16),
-                    child: Row(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Icon(Icons.person, color: textColor),
-                        const SizedBox(width: 12),
-                        Expanded(
+                        _AccountInfoLine(
+                          icon: Icons.person,
                           child: Text(
                             username ?? user?.email ?? 'Unknown user',
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
                         ),
+                        if (user != null) ...[
+                          const SizedBox(height: 12),
+                          _UploadStatusLine(
+                            state: uploadState,
+                            onUploadPressed: () =>
+                                _uploadUserData(context, ref),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -174,6 +209,113 @@ class _SettingsSection extends StatelessWidget {
       titleIconColor: titleColor,
       titleStyle: Theme.of(context).textTheme.bodyMedium,
       child: child,
+    );
+  }
+}
+
+class _UploadStatusLine extends ConsumerWidget {
+  const _UploadStatusLine({required this.state, required this.onUploadPressed});
+
+  final UserDataUploadState state;
+  final VoidCallback? onUploadPressed;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final textColor = ref.watch(appPrimaryTextColorProvider);
+    final statusColor = _statusColor(textColor);
+
+    return _AccountInfoLine(
+      icon: _statusIcon,
+      iconColor: statusColor,
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              _statusText,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: statusColor,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          TextButton(onPressed: onUploadPressed, child: const Text('Sync')),
+        ],
+      ),
+    );
+  }
+
+  IconData get _statusIcon {
+    return switch (state.status) {
+      UserDataUploadStatus.uploaded => Icons.cloud_done_outlined,
+      UserDataUploadStatus.uploading => Icons.cloud_upload_outlined,
+      UserDataUploadStatus.failed => Icons.cloud_off_outlined,
+      UserDataUploadStatus.unavailable => Icons.cloud_off_outlined,
+      UserDataUploadStatus.idle => Icons.cloud_queue_outlined,
+    };
+  }
+
+  String get _statusText {
+    return switch (state.status) {
+      UserDataUploadStatus.uploaded =>
+        state.lastUploadedAt == null
+            ? 'sync'
+            : 'sync ${_timeLabel(state.lastUploadedAt!)}',
+      UserDataUploadStatus.uploading =>
+        state.lastUploadedAt == null
+            ? 'sync'
+            : 'sync ${_timeLabel(state.lastUploadedAt!)}',
+      UserDataUploadStatus.failed => 'sync issue',
+      UserDataUploadStatus.unavailable => 'sync issue',
+      UserDataUploadStatus.idle => 'never synced',
+    };
+  }
+
+  String _timeLabel(DateTime dateTime) {
+    final local = dateTime.toLocal();
+    final hour = local.hour.toString().padLeft(2, '0');
+    final minute = local.minute.toString().padLeft(2, '0');
+
+    return '$hour:$minute';
+  }
+
+  Color _statusColor(Color textColor) {
+    return switch (state.status) {
+      UserDataUploadStatus.uploaded => textColor.withValues(alpha: 0.75),
+      UserDataUploadStatus.uploading => textColor.withValues(alpha: 0.75),
+      UserDataUploadStatus.failed => Colors.amberAccent,
+      UserDataUploadStatus.unavailable => Colors.amberAccent,
+      UserDataUploadStatus.idle => Colors.redAccent,
+    };
+  }
+}
+
+class _AccountInfoLine extends ConsumerWidget {
+  const _AccountInfoLine({
+    required this.icon,
+    required this.child,
+    this.iconColor,
+  });
+
+  final IconData icon;
+  final Widget child;
+  final Color? iconColor;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final textColor = ref.watch(appPrimaryTextColorProvider);
+
+    return Row(
+      children: [
+        SizedBox(
+          width: 24,
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Icon(icon, color: iconColor ?? textColor, size: 20),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(child: child),
+      ],
     );
   }
 }
@@ -341,8 +483,16 @@ class _CategorySheetState extends ConsumerState<_CategorySheet> {
     } else {
       ref
           .read(categoryProvider.notifier)
-          .addCategory(name: name, icon: _selectedIcon);
+          .addCategory(
+            name: name,
+            icon: _selectedIcon == Icons.label_outline ? null : _selectedIcon,
+          );
     }
+    unawaited(
+      ref
+          .read(userDataUploadControllerProvider.notifier)
+          .uploadCurrentIfOnline(),
+    );
 
     Navigator.of(context).pop();
   }
@@ -367,6 +517,11 @@ class _CategorySheetState extends ConsumerState<_CategorySheet> {
 
     if (entryCount == 0) {
       ref.read(categoryProvider.notifier).removeCategory(category.uuid);
+      unawaited(
+        ref
+            .read(userDataUploadControllerProvider.notifier)
+            .uploadCurrentIfOnline(),
+      );
       if (mounted) {
         Navigator.of(context).pop();
       }
@@ -389,6 +544,11 @@ class _CategorySheetState extends ConsumerState<_CategorySheet> {
         .read(financialDataProvider.notifier)
         .replaceCategory(category.uuid, result.replacementCategoryUuid);
     ref.read(categoryProvider.notifier).removeCategory(category.uuid);
+    unawaited(
+      ref
+          .read(userDataUploadControllerProvider.notifier)
+          .uploadCurrentIfOnline(),
+    );
     Navigator.of(context).pop();
   }
 
@@ -432,9 +592,8 @@ class _CategorySheetState extends ConsumerState<_CategorySheet> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                AppSelect<IconData>(
-                  value: _selectedIcon,
-                  items: _categoryIconItems,
+                _CategoryIconGrid(
+                  selectedIcon: _selectedIcon,
                   onChanged: (icon) {
                     setState(() {
                       _selectedIcon = icon;
@@ -607,48 +766,92 @@ class _DeleteCategorySheetState extends ConsumerState<_DeleteCategorySheet> {
   }
 }
 
-const _categoryIconItems = [
-  AppSelectItem(
-    value: Icons.label_outline,
-    label: 'General',
-    icon: Icons.label_outline,
-  ),
-  AppSelectItem(
-    value: Icons.work_outline,
-    label: 'Work',
-    icon: Icons.work_outline,
-  ),
-  AppSelectItem(
-    value: Icons.home_outlined,
-    label: 'Home',
-    icon: Icons.home_outlined,
-  ),
-  AppSelectItem(
-    value: Icons.restaurant_outlined,
-    label: 'Food',
-    icon: Icons.restaurant_outlined,
-  ),
-  AppSelectItem(
-    value: Icons.train_outlined,
-    label: 'Transport',
-    icon: Icons.train_outlined,
-  ),
-  AppSelectItem(
-    value: Icons.shopping_bag_outlined,
-    label: 'Shopping',
-    icon: Icons.shopping_bag_outlined,
-  ),
-  AppSelectItem(
-    value: Icons.receipt_long_outlined,
-    label: 'Bills',
-    icon: Icons.receipt_long_outlined,
-  ),
-  AppSelectItem(
-    value: Icons.savings_outlined,
-    label: 'Savings',
-    icon: Icons.savings_outlined,
-  ),
-];
+class _CategoryIconGrid extends ConsumerWidget {
+  const _CategoryIconGrid({
+    required this.selectedIcon,
+    required this.onChanged,
+  });
+
+  final IconData selectedIcon;
+  final ValueChanged<IconData> onChanged;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final textColor = ref.watch(appPrimaryTextColorProvider);
+    final inputBackground = ref
+        .watch(appPrimary500ColorProvider)
+        .withValues(alpha: 0.5);
+    final selectedColor = ref.watch(appPrimary300ColorProvider);
+    final selectedTextColor = ref.watch(appPrimary500ColorProvider);
+
+    return GridView.count(
+      crossAxisCount: 6,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      mainAxisSpacing: 6,
+      crossAxisSpacing: 6,
+      children: [
+        for (final icon in _categoryIcons)
+          _CategoryIconButton(
+            icon: icon,
+            selected: icon == selectedIcon,
+            textColor: textColor,
+            selectedColor: selectedColor,
+            selectedTextColor: selectedTextColor,
+            backgroundColor: inputBackground,
+            onTap: () => onChanged(icon),
+          ),
+      ],
+    );
+  }
+}
+
+class _CategoryIconButton extends StatelessWidget {
+  const _CategoryIconButton({
+    required this.icon,
+    required this.selected,
+    required this.textColor,
+    required this.selectedColor,
+    required this.selectedTextColor,
+    required this.backgroundColor,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final bool selected;
+  final Color textColor;
+  final Color selectedColor;
+  final Color selectedTextColor;
+  final Color backgroundColor;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: SizedBox.square(
+        dimension: 42,
+        child: Material(
+          color: selected ? selectedColor : backgroundColor,
+          shape: const CircleBorder(),
+          child: InkWell(
+            onTap: onTap,
+            customBorder: const CircleBorder(),
+            child: Icon(
+              icon,
+              color: selected ? selectedTextColor : textColor,
+              size: 22,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+final _categoryIcons = {
+  Icons.label_outline,
+  ...categoryIconByName.values,
+}.toList();
 
 class _PlainIconButton extends ConsumerWidget {
   const _PlainIconButton({

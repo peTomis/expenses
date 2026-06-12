@@ -1,5 +1,5 @@
+import 'dart:async';
 import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,6 +12,7 @@ import '../../components/text_input/app_text_input.dart';
 import '../../providers/category_provider.dart';
 import '../../providers/color_provider.dart';
 import '../../providers/financial_data_provider.dart';
+import '../../providers/user_data_upload_provider.dart';
 import '../settings/settings_page.dart';
 import 'home_providers.dart';
 
@@ -49,11 +50,30 @@ const _homeTabItems = [
   ),
 ];
 
-class HomePage extends ConsumerWidget {
+class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends ConsumerState<HomePage> {
+  @override
+  void initState() {
+    super.initState();
+    Future<void>.microtask(() {
+      if (mounted) {
+        unawaited(
+          ref
+              .read(userDataUploadControllerProvider.notifier)
+              .loadCurrentIfOnline(),
+        );
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final selectedTabIndex = ref.watch(homeTabIndexProvider);
 
     return Scaffold(

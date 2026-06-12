@@ -29,8 +29,25 @@ class AuthRepository {
     return _client.auth.signInWithPassword(email: email, password: password);
   }
 
-  Future<void> signUp({required String email, required String password}) {
-    return _client.auth.signUp(email: email, password: password);
+  Future<SignUpResult> signUp({
+    required String email,
+    required String password,
+  }) async {
+    final response = await _client.auth.signUp(
+      email: email,
+      password: password,
+    );
+    final identities = response.user?.identities;
+
+    if (identities != null && identities.isEmpty) {
+      return SignUpResult.emailAlreadyRegistered;
+    }
+
+    if (response.session != null) {
+      return SignUpResult.created;
+    }
+
+    return SignUpResult.confirmationRequired;
   }
 
   Future<void> resetPassword({required String email}) {
@@ -43,6 +60,8 @@ class AuthRepository {
 
   User? get currentUser => _client.auth.currentUser;
 }
+
+enum SignUpResult { created, confirmationRequired, emailAlreadyRegistered }
 
 class AuthFormState {
   const AuthFormState({

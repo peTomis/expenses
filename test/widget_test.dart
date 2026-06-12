@@ -41,8 +41,14 @@ void main() {
     );
   });
 
-  testWidgets('Shows login form by default', (WidgetTester tester) async {
+  testWidgets('Shows login form after choosing online account', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(const ProviderScope(child: MyApp()));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Choose account type'), findsOneWidget);
+    await tester.tap(find.text('Online account'));
     await tester.pumpAndSettle();
 
     expect(find.widgetWithText(AppButton, 'Login'), findsOneWidget);

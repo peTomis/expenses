@@ -70,7 +70,36 @@ class _AuthPageState extends ConsumerState<AuthPage> {
         final usernameValue = auth.currentUser?.email ?? email;
         await username.setUsername(usernameValue);
       } else {
-        await auth.signUp(email: email, password: password);
+        final signUpResult = await auth.signUp(
+          email: email,
+          password: password,
+        );
+        switch (signUpResult) {
+          case SignUpResult.created:
+            break;
+          case SignUpResult.confirmationRequired:
+            if (!mounted) {
+              return;
+            }
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(l10n.text('auth.registerCheckEmail'))),
+            );
+            return;
+          case SignUpResult.emailAlreadyRegistered:
+            if (!mounted) {
+              return;
+            }
+
+            final errorMessage = l10n.text('auth.emailAlreadyRegistered');
+            setState(() {
+              _emailError = errorMessage;
+            });
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(errorMessage)));
+            return;
+        }
       }
 
       if (!mounted) {
@@ -86,16 +115,18 @@ class _AuthPageState extends ConsumerState<AuthPage> {
       if (!mounted) {
         return;
       }
+      final errorMessage = _getAuthErrorMessage(error, l10n);
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(error.message)));
-    } catch (_) {
+      ).showSnackBar(SnackBar(content: Text(errorMessage)));
+    } catch (error) {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.text('auth.unexpectedError'))),
-      );
+      final errorMessage = _getErrorMessage(error, l10n);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(errorMessage)));
     } finally {
       if (mounted) {
         authFormNotifier.setSubmitting(false);
@@ -143,16 +174,18 @@ class _AuthPageState extends ConsumerState<AuthPage> {
       if (!mounted) {
         return;
       }
+      final errorMessage = _getAuthErrorMessage(error, l10n);
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(error.message)));
-    } catch (_) {
+      ).showSnackBar(SnackBar(content: Text(errorMessage)));
+    } catch (error) {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.text('auth.unexpectedError'))),
-      );
+      final errorMessage = _getErrorMessage(error, l10n);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(errorMessage)));
     } finally {
       if (mounted) {
         authFormNotifier.setSubmitting(false);
@@ -190,6 +223,54 @@ class _AuthPageState extends ConsumerState<AuthPage> {
     setState(() {
       _isChoosingAccountType = false;
     });
+  }
+
+  String _getAuthErrorMessage(AuthException error, AppLocalizations l10n) {
+    final message = error.message.toLowerCase();
+
+    // Check for specific error patterns
+    if (message.contains('invalid login credentials') ||
+        message.contains('invalid email or password') ||
+        message.contains('incorrect password') ||
+        message.contains('user not found') ||
+        message.contains('no user found')) {
+      return l10n.text('auth.invalidCredentials');
+    }
+
+    if (message.contains('email already exists') ||
+        message.contains('user already registered')) {
+      return l10n.text('auth.emailAlreadyRegistered');
+    }
+
+    // Return original message for other auth errors
+    return error.message;
+  }
+
+  String _getErrorMessage(dynamic error, AppLocalizations l10n) {
+    final errorString = error.toString().toLowerCase();
+
+    // Check for network/fetch errors
+    if (errorString.contains('failed to fetch') ||
+        errorString.contains('clientexception') ||
+        errorString.contains('network') ||
+        errorString.contains('no internet') ||
+        errorString.contains('connection refused')) {
+      return l10n.text('auth.networkError');
+    }
+
+    // Check for server errors
+    if (errorString.contains('500') ||
+        errorString.contains('server error') ||
+        errorString.contains('internal server')) {
+      return l10n.text('auth.serverError');
+    }
+
+    // Check for timeout
+    if (errorString.contains('timeout') || errorString.contains('timed out')) {
+      return l10n.text('auth.networkError');
+    }
+
+    return l10n.text('auth.unexpectedError');
   }
 
   bool _validateInputs() {

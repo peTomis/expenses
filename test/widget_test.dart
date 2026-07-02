@@ -2,11 +2,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:expenses/components/button/app_button.dart';
 import 'package:expenses/components/text_input/app_text_input.dart';
-import 'package:expenses/config/env.dart';
 import 'package:expenses/main.dart';
 
 void main() {
@@ -33,26 +31,16 @@ void main() {
               return null;
           }
         });
-
-    await AppEnv.load();
-    await Supabase.initialize(
-      url: AppEnv.supabaseUrl,
-      anonKey: AppEnv.supabaseAnonKey,
-    );
   });
 
-  testWidgets('Shows login form after choosing online account', (
+  testWidgets('Shows username form when no local account is set', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(const ProviderScope(child: MyApp()));
     await tester.pumpAndSettle();
 
-    expect(find.text('Choose account type'), findsOneWidget);
-    await tester.tap(find.text('Online account'));
-    await tester.pumpAndSettle();
-
-    expect(find.widgetWithText(AppButton, 'Login'), findsOneWidget);
-    expect(find.byType(AppTextInput), findsNWidgets(2));
-    expect(find.byType(AppButton), findsOneWidget);
+    expect(find.text('Choose an username'), findsOneWidget);
+    expect(find.byType(AppTextInput), findsOneWidget);
+    expect(find.widgetWithText(AppButton, 'Continue'), findsOneWidget);
   });
 }

@@ -1,8 +1,5 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../components/button/app_button.dart';
 import '../../components/card/app_card.dart';
@@ -11,10 +8,9 @@ import '../../components/select/app_select.dart';
 import '../../components/text_input/app_text_input.dart';
 import '../../providers/category_provider.dart';
 import '../../providers/color_provider.dart';
+import '../../providers/data_backup_provider.dart';
 import '../../providers/financial_data_provider.dart';
-import '../../providers/user_data_upload_provider.dart';
 import '../../providers/username_provider.dart';
-import '../auth/auth_providers.dart';
 
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key, this.showBackButton = true});
@@ -33,58 +29,51 @@ class SettingsContent extends ConsumerWidget {
   final bool showBackButton;
 
   Future<void> _logout(BuildContext context, WidgetRef ref) async {
-    final username = ref.read(usernameProvider.notifier);
-    final auth = ref.read(authRepositoryProvider);
-
-    try {
-      await username.clearUsername();
-      await auth.signOut();
-      if (context.mounted && Navigator.of(context).canPop()) {
-        Navigator.of(context).pop();
-      }
-    } on AuthException catch (error) {
-      if (!context.mounted) {
-        return;
-      }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.message)));
+    await ref.read(usernameProvider.notifier).clearUsername();
+    if (context.mounted && Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
     }
   }
 
-  Future<void> _uploadUserData(BuildContext context, WidgetRef ref) async {
-    final uploaded = await ref
-        .read(userDataUploadControllerProvider.notifier)
-        .uploadCurrent();
+  Future<void> _exportBackup(BuildContext context, WidgetRef ref) async {
+    final exported = await ref
+        .read(dataBackupControllerProvider.notifier)
+        .exportBackup();
 
     if (!context.mounted) {
       return;
     }
 
-    final uploadState = ref.read(userDataUploadControllerProvider);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(exported ? 'Backup saved' : 'Export cancelled')),
+    );
+  }
+
+  Future<void> _importBackup(BuildContext context, WidgetRef ref) async {
+    final imported = await ref
+        .read(dataBackupControllerProvider.notifier)
+        .importBackup();
+
+    if (!context.mounted) {
+      return;
+    }
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          uploaded
-              ? 'sync'
-              : uploadState.status == UserDataUploadStatus.uploading
-              ? 'sync'
-              : 'sync issue',
-        ),
+        content: Text(imported ? 'Backup imported' : 'Import cancelled'),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final user = ref.watch(authRepositoryProvider).currentUser;
     final username = ref
         .watch(usernameProvider)
         .whenOrNull(data: (username) => username);
     final financialData = ref.watch(financialDataProvider);
     final selectedCurrency = financialData.accountData.currency;
     final categories = ref.watch(categoryProvider);
-    final uploadState = ref.watch(userDataUploadControllerProvider);
+    final backupState = ref.watch(dataBackupControllerProvider);
     final textColor = ref.watch(appPrimaryTextColorProvider);
 
     return SafeArea(
@@ -123,18 +112,16 @@ class SettingsContent extends ConsumerWidget {
                         _AccountInfoLine(
                           icon: Icons.person,
                           child: Text(
-                            username ?? user?.email ?? 'Unknown user',
+                            username ?? 'Unknown user',
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
                         ),
-                        if (user != null) ...[
-                          const SizedBox(height: 12),
-                          _UploadStatusLine(
-                            state: uploadState,
-                            onUploadPressed: () =>
-                                _uploadUserData(context, ref),
-                          ),
-                        ],
+                        const SizedBox(height: 12),
+                        _BackupStatusLine(
+                          state: backupState,
+                          onExportPressed: () => _exportBackup(context, ref),
+                          onImportPressed: () => _importBackup(context, ref),
+                        ),
                       ],
                     ),
                   ),
@@ -168,10 +155,20 @@ class SettingsContent extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  TextButton.icon(
-                    onPressed: () => _logout(context, ref),
-                    icon: const Icon(Icons.logout),
-                    label: const Text('Logout'),
+                  Align(
+                    alignment: Alignment.center,
+                    child: TextButton.icon(
+                      onPressed: () => _logout(context, ref),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      icon: const Icon(Icons.logout, size: 24),
+                      label: Text(
+                        'Logout',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -213,11 +210,16 @@ class _SettingsSection extends StatelessWidget {
   }
 }
 
-class _UploadStatusLine extends ConsumerWidget {
-  const _UploadStatusLine({required this.state, required this.onUploadPressed});
+class _BackupStatusLine extends ConsumerWidget {
+  const _BackupStatusLine({
+    required this.state,
+    required this.onExportPressed,
+    required this.onImportPressed,
+  });
 
-  final UserDataUploadState state;
-  final VoidCallback? onUploadPressed;
+  final DataBackupState state;
+  final VoidCallback? onExportPressed;
+  final VoidCallback? onImportPressed;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -238,7 +240,24 @@ class _UploadStatusLine extends ConsumerWidget {
               ),
             ),
           ),
-          TextButton(onPressed: onUploadPressed, child: const Text('Sync')),
+          TextButton(
+            onPressed: state.isWorking ? null : onImportPressed,
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              minimumSize: Size.zero,
+            ),
+            child: const Text('Import'),
+          ),
+          TextButton(
+            onPressed: state.isWorking ? null : onExportPressed,
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              minimumSize: Size.zero,
+            ),
+            child: const Text('Export'),
+          ),
         ],
       ),
     );
@@ -246,27 +265,22 @@ class _UploadStatusLine extends ConsumerWidget {
 
   IconData get _statusIcon {
     return switch (state.status) {
-      UserDataUploadStatus.uploaded => Icons.cloud_done_outlined,
-      UserDataUploadStatus.uploading => Icons.cloud_upload_outlined,
-      UserDataUploadStatus.failed => Icons.cloud_off_outlined,
-      UserDataUploadStatus.unavailable => Icons.cloud_off_outlined,
-      UserDataUploadStatus.idle => Icons.cloud_queue_outlined,
+      DataBackupStatus.done => Icons.cloud_done_outlined,
+      DataBackupStatus.working => Icons.cloud_upload_outlined,
+      DataBackupStatus.failed => Icons.cloud_off_outlined,
+      DataBackupStatus.idle => Icons.cloud_queue_outlined,
     };
   }
 
   String get _statusText {
     return switch (state.status) {
-      UserDataUploadStatus.uploaded =>
-        state.lastUploadedAt == null
-            ? 'sync'
-            : 'sync ${_timeLabel(state.lastUploadedAt!)}',
-      UserDataUploadStatus.uploading =>
-        state.lastUploadedAt == null
-            ? 'sync'
-            : 'sync ${_timeLabel(state.lastUploadedAt!)}',
-      UserDataUploadStatus.failed => 'sync issue',
-      UserDataUploadStatus.unavailable => 'sync issue',
-      UserDataUploadStatus.idle => 'never synced',
+      DataBackupStatus.done =>
+        state.lastBackupAt == null
+            ? 'Backed up'
+            : 'Backed up ${_timeLabel(state.lastBackupAt!)}',
+      DataBackupStatus.working => 'Working...',
+      DataBackupStatus.failed => state.message ?? 'Backup issue',
+      DataBackupStatus.idle => 'Never backed up',
     };
   }
 
@@ -280,11 +294,10 @@ class _UploadStatusLine extends ConsumerWidget {
 
   Color _statusColor(Color textColor) {
     return switch (state.status) {
-      UserDataUploadStatus.uploaded => textColor.withValues(alpha: 0.75),
-      UserDataUploadStatus.uploading => textColor.withValues(alpha: 0.75),
-      UserDataUploadStatus.failed => Colors.amberAccent,
-      UserDataUploadStatus.unavailable => Colors.amberAccent,
-      UserDataUploadStatus.idle => Colors.redAccent,
+      DataBackupStatus.done => textColor.withValues(alpha: 0.75),
+      DataBackupStatus.working => textColor.withValues(alpha: 0.75),
+      DataBackupStatus.failed => Colors.amberAccent,
+      DataBackupStatus.idle => Colors.redAccent,
     };
   }
 }
@@ -352,61 +365,71 @@ class _CategoryListSheet extends ConsumerWidget {
     final backgroundColor = ref.watch(appBackgroundColorProvider);
     final textColor = ref.watch(appPrimaryTextColorProvider);
     final categories = ref.watch(categoryProvider);
+    final maxSheetHeight = MediaQuery.sizeOf(context).height * 0.7;
 
     return Padding(
       padding: EdgeInsets.only(bottom: bottomInset),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: maxSheetHeight),
+        child: Material(
           color: backgroundColor,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
-        ),
-        child: SafeArea(
-          top: false,
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+          child: SafeArea(
+            top: false,
             child: Column(
-              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'Categories',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: textColor,
-                          fontWeight: FontWeight.w800,
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Categories',
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(
+                                color: textColor,
+                                fontWeight: FontWeight.w800,
+                              ),
                         ),
                       ),
-                    ),
-                    IconButton(
-                      tooltip: 'Add category',
-                      onPressed: () => _showCategorySheet(context),
-                      icon: const Icon(Icons.add),
-                    ),
-                    IconButton(
-                      tooltip: 'Close',
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.close),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                for (final category in categories)
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    minLeadingWidth: 32,
-                    leading: Icon(category.icon, color: textColor),
-                    onTap: () =>
-                        _showCategorySheet(context, category: category),
-                    title: Text(
-                      category.name,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodyMedium?.copyWith(color: textColor),
-                    ),
-                    trailing: const Icon(Icons.edit_outlined),
+                      IconButton(
+                        tooltip: 'Add category',
+                        onPressed: () => _showCategorySheet(context),
+                        icon: const Icon(Icons.add),
+                      ),
+                      IconButton(
+                        tooltip: 'Close',
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: const Icon(Icons.close),
+                      ),
+                    ],
                   ),
+                ),
+                Expanded(
+                  child: ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                    itemCount: categories.length,
+                    itemBuilder: (context, index) {
+                      final category = categories[index];
+
+                      return ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        minLeadingWidth: 32,
+                        leading: Icon(category.icon, color: category.color),
+                        onTap: () =>
+                            _showCategorySheet(context, category: category),
+                        title: Text(
+                          category.name,
+                          style: Theme.of(
+                            context,
+                          ).textTheme.bodyMedium?.copyWith(color: textColor),
+                        ),
+                        trailing: const Icon(Icons.edit_outlined),
+                      );
+                    },
+                  ),
+                ),
               ],
             ),
           ),
@@ -441,6 +464,7 @@ class _CategorySheetState extends ConsumerState<_CategorySheet> {
   late final TextEditingController _nameController;
 
   late IconData _selectedIcon;
+  late Color _selectedColor;
   String? _nameError;
 
   bool get _isEditing => widget.category != null;
@@ -450,6 +474,7 @@ class _CategorySheetState extends ConsumerState<_CategorySheet> {
     super.initState();
     _nameController = TextEditingController(text: widget.category?.name ?? '');
     _selectedIcon = widget.category?.icon ?? Icons.label_outline;
+    _selectedColor = widget.category?.color ?? const Color(0xFF607D8B);
   }
 
   @override
@@ -478,7 +503,11 @@ class _CategorySheetState extends ConsumerState<_CategorySheet> {
       ref
           .read(categoryProvider.notifier)
           .updateCategory(
-            widget.category!.copyWith(name: name, icon: _selectedIcon),
+            widget.category!.copyWith(
+              name: name,
+              icon: _selectedIcon,
+              color: _selectedColor,
+            ),
           );
     } else {
       ref
@@ -486,13 +515,9 @@ class _CategorySheetState extends ConsumerState<_CategorySheet> {
           .addCategory(
             name: name,
             icon: _selectedIcon == Icons.label_outline ? null : _selectedIcon,
+            color: _selectedColor,
           );
     }
-    unawaited(
-      ref
-          .read(userDataUploadControllerProvider.notifier)
-          .uploadCurrentIfOnline(),
-    );
 
     Navigator.of(context).pop();
   }
@@ -517,11 +542,6 @@ class _CategorySheetState extends ConsumerState<_CategorySheet> {
 
     if (entryCount == 0) {
       ref.read(categoryProvider.notifier).removeCategory(category.uuid);
-      unawaited(
-        ref
-            .read(userDataUploadControllerProvider.notifier)
-            .uploadCurrentIfOnline(),
-      );
       if (mounted) {
         Navigator.of(context).pop();
       }
@@ -544,11 +564,6 @@ class _CategorySheetState extends ConsumerState<_CategorySheet> {
         .read(financialDataProvider.notifier)
         .replaceCategory(category.uuid, result.replacementCategoryUuid);
     ref.read(categoryProvider.notifier).removeCategory(category.uuid);
-    unawaited(
-      ref
-          .read(userDataUploadControllerProvider.notifier)
-          .uploadCurrentIfOnline(),
-    );
     Navigator.of(context).pop();
   }
 
@@ -592,8 +607,18 @@ class _CategorySheetState extends ConsumerState<_CategorySheet> {
                   ],
                 ),
                 const SizedBox(height: 16),
+                _ColorPicker(
+                  color: _selectedColor,
+                  onChanged: (color) {
+                    setState(() {
+                      _selectedColor = color;
+                    });
+                  },
+                ),
+                const SizedBox(height: 12),
                 _CategoryIconGrid(
                   selectedIcon: _selectedIcon,
+                  selectedColor: _selectedColor,
                   onChanged: (icon) {
                     setState(() {
                       _selectedIcon = icon;
@@ -766,13 +791,181 @@ class _DeleteCategorySheetState extends ConsumerState<_DeleteCategorySheet> {
   }
 }
 
+class _ColorPicker extends StatelessWidget {
+  const _ColorPicker({required this.color, required this.onChanged});
+
+  final Color color;
+  final ValueChanged<Color> onChanged;
+
+  void _onSVPan(HSVColor hsv, Offset local, Size size) {
+    final s = (local.dx / size.width).clamp(0.0, 1.0);
+    final v = (1.0 - local.dy / size.height).clamp(0.0, 1.0);
+    onChanged(hsv.withSaturation(s).withValue(v).toColor());
+  }
+
+  void _onHuePan(HSVColor hsv, Offset local, Size size) {
+    final hue = (local.dx / size.width * 360.0).clamp(0.0, 360.0);
+    onChanged(hsv.withHue(hue).toColor());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hsv = HSVColor.fromColor(color);
+
+    return Column(
+      children: [
+        LayoutBuilder(
+          builder: (context, constraints) {
+            const h = 160.0;
+            final size = Size(constraints.maxWidth, h);
+            return GestureDetector(
+              onPanStart: (d) => _onSVPan(hsv, d.localPosition, size),
+              onPanUpdate: (d) => _onSVPan(hsv, d.localPosition, size),
+              onTapDown: (d) => _onSVPan(hsv, d.localPosition, size),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: CustomPaint(
+                  size: size,
+                  painter: _SVPickerPainter(
+                    hue: hsv.hue,
+                    saturation: hsv.saturation,
+                    value: hsv.value,
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: 12),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            const h = 20.0;
+            final size = Size(constraints.maxWidth, h);
+            return GestureDetector(
+              onPanStart: (d) => _onHuePan(hsv, d.localPosition, size),
+              onPanUpdate: (d) => _onHuePan(hsv, d.localPosition, size),
+              onTapDown: (d) => _onHuePan(hsv, d.localPosition, size),
+              child: CustomPaint(
+                size: size,
+                painter: _HuePickerPainter(hue: hsv.hue),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class _SVPickerPainter extends CustomPainter {
+  const _SVPickerPainter({
+    required this.hue,
+    required this.saturation,
+    required this.value,
+  });
+
+  final double hue;
+  final double saturation;
+  final double value;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final hueColor = HSVColor.fromAHSV(1.0, hue, 1.0, 1.0).toColor();
+
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..shader = LinearGradient(
+          colors: [Colors.white, hueColor],
+        ).createShader(rect),
+    );
+
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Colors.transparent, Colors.black],
+        ).createShader(rect),
+    );
+
+    final cx = saturation * size.width;
+    final cy = (1.0 - value) * size.height;
+    canvas.drawCircle(
+      Offset(cx, cy),
+      10,
+      Paint()
+        ..color = Colors.white
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2,
+    );
+    canvas.drawCircle(
+      Offset(cx, cy),
+      8,
+      Paint()..color = Colors.black.withValues(alpha: 0.25),
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _SVPickerPainter old) =>
+      old.hue != hue || old.saturation != saturation || old.value != value;
+}
+
+class _HuePickerPainter extends CustomPainter {
+  const _HuePickerPainter({required this.hue});
+
+  final double hue;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(4));
+
+    canvas.drawRRect(
+      rrect,
+      Paint()
+        ..shader = LinearGradient(
+          colors: [
+            for (var i = 0; i <= 6; i++)
+              HSVColor.fromAHSV(1.0, i * 60.0, 1.0, 1.0).toColor(),
+          ],
+        ).createShader(rect),
+    );
+
+    final tx = (hue / 360.0) * size.width;
+    final ty = size.height / 2;
+    final r = size.height / 2 + 2;
+
+    canvas.drawCircle(
+      Offset(tx, ty),
+      r,
+      Paint()
+        ..color = Colors.white
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2,
+    );
+    canvas.drawCircle(
+      Offset(tx, ty),
+      r - 2,
+      Paint()..color = HSVColor.fromAHSV(1.0, hue, 1.0, 1.0).toColor(),
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _HuePickerPainter old) => old.hue != hue;
+}
+
 class _CategoryIconGrid extends ConsumerWidget {
   const _CategoryIconGrid({
     required this.selectedIcon,
+    required this.selectedColor,
     required this.onChanged,
   });
 
   final IconData selectedIcon;
+  final Color selectedColor;
   final ValueChanged<IconData> onChanged;
 
   @override
@@ -781,8 +974,6 @@ class _CategoryIconGrid extends ConsumerWidget {
     final inputBackground = ref
         .watch(appPrimary500ColorProvider)
         .withValues(alpha: 0.5);
-    final selectedColor = ref.watch(appPrimary300ColorProvider);
-    final selectedTextColor = ref.watch(appPrimary500ColorProvider);
 
     return GridView.count(
       crossAxisCount: 6,
@@ -797,7 +988,6 @@ class _CategoryIconGrid extends ConsumerWidget {
             selected: icon == selectedIcon,
             textColor: textColor,
             selectedColor: selectedColor,
-            selectedTextColor: selectedTextColor,
             backgroundColor: inputBackground,
             onTap: () => onChanged(icon),
           ),
@@ -812,7 +1002,6 @@ class _CategoryIconButton extends StatelessWidget {
     required this.selected,
     required this.textColor,
     required this.selectedColor,
-    required this.selectedTextColor,
     required this.backgroundColor,
     required this.onTap,
   });
@@ -821,7 +1010,6 @@ class _CategoryIconButton extends StatelessWidget {
   final bool selected;
   final Color textColor;
   final Color selectedColor;
-  final Color selectedTextColor;
   final Color backgroundColor;
   final VoidCallback onTap;
 
@@ -838,7 +1026,7 @@ class _CategoryIconButton extends StatelessWidget {
             customBorder: const CircleBorder(),
             child: Icon(
               icon,
-              color: selected ? selectedTextColor : textColor,
+              color: selected ? Colors.white : textColor,
               size: 22,
             ),
           ),
@@ -848,10 +1036,7 @@ class _CategoryIconButton extends StatelessWidget {
   }
 }
 
-final _categoryIcons = {
-  Icons.label_outline,
-  ...categoryIconByName.values,
-}.toList();
+final _categoryIcons = [Icons.label_outline, ...categoryIcons];
 
 class _PlainIconButton extends ConsumerWidget {
   const _PlainIconButton({

@@ -38,10 +38,9 @@ dependencies:
   cupertino_icons: ^1.0.8
   flutter_riverpod: ^3.0.3
   flutter_svg: ^2.2.0
-  supabase_flutter: ^2.12.4
-  flutter_dotenv: ^6.0.1
   url_launcher: ^6.3.2
   shared_preferences: ^2.5.5
+  file_picker: ^11.0.2
 
 dev_dependencies:
   flutter_test:
@@ -70,7 +69,6 @@ flutter:
     - assets/icons/logo.svg
     - assets/icons/pe_logo.svg
     - assets/i18n/
-    - env/
   fonts:
     - family: IBM Plex Sans Condensed
       fonts:

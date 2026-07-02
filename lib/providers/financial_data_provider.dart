@@ -61,7 +61,7 @@ final mockedMonthlyFinancialData = [
         amount: -210,
         account: 1,
         merchant: 'Insurance',
-        category: defaultCategories[1].uuid,
+        category: null,
       ),
       FinancialDataEntry(
         timestamp: DateTime(2026, 3, 26),

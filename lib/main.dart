@@ -2,14 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'config/env.dart';
 import 'i18n/app_localizations.dart';
 import 'pages/auth/auth_gate.dart';
 import 'providers/color_provider.dart';
 
-Future<void> main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
@@ -17,13 +15,6 @@ Future<void> main() async {
       statusBarBrightness: Brightness.dark,
       statusBarColor: Colors.transparent,
     ),
-  );
-
-  await AppEnv.load();
-
-  await Supabase.initialize(
-    url: AppEnv.supabaseUrl,
-    anonKey: AppEnv.supabaseAnonKey,
   );
 
   runApp(const ProviderScope(child: MyApp()));

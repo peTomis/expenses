@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(flutter pub *)",
+      "Bash(dart pub *)",
+      "Bash(curl -s https://pub.dev/api/packages/file_picker)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(d['latest']['version']\\)\")",
+      "Bash(git status *)",
+      "Bash(git rm *)",
+      "Bash(find ~/.pub-cache -maxdepth 1 -iname \"file_picker*\" 2>/dev/null; echo \"---\"; cat pubspec.lock | grep -A3 \"file_picker:\")",
+      "Read(//Users/pe/.pub-cache/**)",
+      "Read(//Users/pe/.pub-cache/hosted/pub.dev/file_picker-11.0.2/lib/**)",
+      "Bash(grep -n \"class FilePicker\\\\|static.*get platform\\\\|FilePicker platform\\\\|_platform\\\\b\" /Users/pe/.pub-cache/hosted/pub.dev/file_picker-11.0.2/lib/src/file_picker.dart)",
+      "Read(//Users/pe/.pub-cache/hosted/pub.dev/file_picker-11.0.2/lib/src/**)",
+      "Bash(flutter test *)",
+      "Bash(git add *)",
+      "Bash(git check-ignore *)"
+    ]
+  }
+}

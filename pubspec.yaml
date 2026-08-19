@@ -41,6 +41,12 @@ dependencies:
   url_launcher: ^6.3.2
   shared_preferences: ^2.5.5
   file_picker: ^11.0.2
+  google_sign_in: ^7.1.1
+  googleapis: ^15.0.0
+  googleapis_auth: ^2.0.0
+  http: ^1.2.0
+  flutter_secure_storage: ^10.3.1
+  crypto: ^3.0.5
 
 dev_dependencies:
   flutter_test:

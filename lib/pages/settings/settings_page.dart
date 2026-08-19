@@ -8,6 +8,7 @@ import '../../components/select/app_select.dart';
 import '../../providers/category_provider.dart';
 import '../../providers/color_provider.dart';
 import '../../providers/data_backup_provider.dart';
+import '../../providers/drive_sync_provider.dart';
 import '../../providers/financial_data_provider.dart';
 import '../../providers/username_provider.dart';
 import 'widgets/category_sheets.dart';
@@ -65,6 +66,19 @@ class SettingsContent extends ConsumerWidget {
     );
   }
 
+  Future<void> _signInToDrive(BuildContext context, WidgetRef ref) async {
+    await ref.read(driveSyncControllerProvider.notifier).signIn();
+
+    final state = ref.read(driveSyncControllerProvider);
+    if (!context.mounted || state.status != DriveSyncStatus.error) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(state.message ?? 'Sign-in failed')),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final username = ref
@@ -74,6 +88,7 @@ class SettingsContent extends ConsumerWidget {
     final selectedCurrency = financialData.accountData.currency;
     final categories = ref.watch(categoryProvider);
     final backupState = ref.watch(dataBackupControllerProvider);
+    final driveSyncState = ref.watch(driveSyncControllerProvider);
     final textColor = ref.watch(appPrimaryTextColorProvider);
 
     return SafeArea(
@@ -123,6 +138,22 @@ class SettingsContent extends ConsumerWidget {
                           onImportPressed: () => _importBackup(context, ref),
                         ),
                       ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _SettingsSection(
+                    title: 'Cloud sync',
+                    titleIcon: Icons.cloud_outlined,
+                    titleColor: textColor,
+                    child: _DriveSyncStatusLine(
+                      state: driveSyncState,
+                      onSignInPressed: () => _signInToDrive(context, ref),
+                      onSignOutPressed: () => ref
+                          .read(driveSyncControllerProvider.notifier)
+                          .signOut(),
+                      onSyncPressed: () => ref
+                          .read(driveSyncControllerProvider.notifier)
+                          .syncNow(),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -277,19 +308,11 @@ class _BackupStatusLine extends ConsumerWidget {
       DataBackupStatus.done =>
         state.lastBackupAt == null
             ? 'Backed up'
-            : 'Backed up ${_timeLabel(state.lastBackupAt!)}',
+            : 'Backed up ${_formatTimeLabel(state.lastBackupAt!)}',
       DataBackupStatus.working => 'Working...',
       DataBackupStatus.failed => state.message ?? 'Backup issue',
       DataBackupStatus.idle => 'Never backed up',
     };
-  }
-
-  String _timeLabel(DateTime dateTime) {
-    final local = dateTime.toLocal();
-    final hour = local.hour.toString().padLeft(2, '0');
-    final minute = local.minute.toString().padLeft(2, '0');
-
-    return '$hour:$minute';
   }
 
   Color _statusColor(Color textColor) {
@@ -298,6 +321,118 @@ class _BackupStatusLine extends ConsumerWidget {
       DataBackupStatus.working => textColor.withValues(alpha: 0.75),
       DataBackupStatus.failed => Colors.amberAccent,
       DataBackupStatus.idle => Colors.redAccent,
+    };
+  }
+}
+
+String _formatTimeLabel(DateTime dateTime) {
+  final local = dateTime.toLocal();
+  final hour = local.hour.toString().padLeft(2, '0');
+  final minute = local.minute.toString().padLeft(2, '0');
+
+  return '$hour:$minute';
+}
+
+class _DriveSyncStatusLine extends ConsumerWidget {
+  const _DriveSyncStatusLine({
+    required this.state,
+    required this.onSignInPressed,
+    required this.onSignOutPressed,
+    required this.onSyncPressed,
+  });
+
+  final DriveSyncState state;
+  final VoidCallback? onSignInPressed;
+  final VoidCallback? onSignOutPressed;
+  final VoidCallback? onSyncPressed;
+
+  bool get _isSignedIn => state.status != DriveSyncStatus.signedOut;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final textColor = ref.watch(appPrimaryTextColorProvider);
+    final statusColor = _statusColor(textColor);
+    final isBusy = state.isSyncing;
+
+    return _AccountInfoLine(
+      icon: _statusIcon,
+      iconColor: statusColor,
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              _statusText,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: statusColor,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          if (_isSignedIn) ...[
+            TextButton(
+              onPressed: isBusy ? null : onSyncPressed,
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                minimumSize: Size.zero,
+              ),
+              child: const Text('Sync now'),
+            ),
+            TextButton(
+              onPressed: isBusy ? null : onSignOutPressed,
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                minimumSize: Size.zero,
+              ),
+              child: const Text('Sign out'),
+            ),
+          ] else
+            TextButton(
+              onPressed: isBusy ? null : onSignInPressed,
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                minimumSize: Size.zero,
+              ),
+              child: const Text('Sign in'),
+            ),
+        ],
+      ),
+    );
+  }
+
+  IconData get _statusIcon {
+    return switch (state.status) {
+      DriveSyncStatus.synced => Icons.cloud_done_outlined,
+      DriveSyncStatus.syncing => Icons.sync,
+      DriveSyncStatus.error => Icons.cloud_off_outlined,
+      DriveSyncStatus.idle => Icons.cloud_queue_outlined,
+      DriveSyncStatus.signedOut => Icons.cloud_off_outlined,
+    };
+  }
+
+  String get _statusText {
+    return switch (state.status) {
+      DriveSyncStatus.synced =>
+        state.lastSyncedAt == null
+            ? 'Synced'
+            : 'Synced ${_formatTimeLabel(state.lastSyncedAt!)}',
+      DriveSyncStatus.syncing => 'Syncing...',
+      DriveSyncStatus.error => state.message ?? 'Sync issue',
+      DriveSyncStatus.idle => state.accountEmail ?? 'Connected',
+      DriveSyncStatus.signedOut => 'Not connected',
+    };
+  }
+
+  Color _statusColor(Color textColor) {
+    return switch (state.status) {
+      DriveSyncStatus.synced => textColor.withValues(alpha: 0.75),
+      DriveSyncStatus.syncing => textColor.withValues(alpha: 0.75),
+      DriveSyncStatus.idle => textColor.withValues(alpha: 0.75),
+      DriveSyncStatus.error => Colors.amberAccent,
+      DriveSyncStatus.signedOut => textColor.withValues(alpha: 0.58),
     };
   }
 }

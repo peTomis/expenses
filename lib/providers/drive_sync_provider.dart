@@ -293,7 +293,10 @@ class DriveSyncController extends Notifier<DriveSyncState> {
     if (error is DriveSyncException) {
       return error.message;
     }
-    return 'Sync failed. Please try again.';
+    if (error is UnsupportedError) {
+      return error.message ?? "This isn't available on this platform yet.";
+    }
+    return 'Something went wrong. Please try again.';
   }
 
   Future<void> _persistLastSyncedAt(DateTime dateTime) async {

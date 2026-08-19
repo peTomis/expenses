@@ -14,7 +14,12 @@
       "Read(//Users/pe/.pub-cache/hosted/pub.dev/file_picker-11.0.2/lib/src/**)",
       "Bash(flutter test *)",
       "Bash(git add *)",
-      "Bash(git check-ignore *)"
+      "Bash(git check-ignore *)",
+      "Bash(cd /tmp *)",
+      "Read(//Users/pe/.pub-cache/hosted/pub.dev/**)",
+      "Bash(P=/Users/pe/.pub-cache/hosted/pub.dev/google_sign_in-7.2.0 *)",
+      "Read(//Users/pe/.pub-cache/hosted/pub.dev/google_sign_in-7.2.0/**)",
+      "Read(//Users/pe/.pub-cache/hosted/pub.dev/google_sign_in-7.2.0/lib/**)"
     ]
   }
 }

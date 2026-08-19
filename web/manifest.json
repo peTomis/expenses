@@ -1,6 +1,6 @@
 {
-    "name": "expenses",
-    "short_name": "expenses",
+    "name": "Cache",
+    "short_name": "Cache",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#00415A",

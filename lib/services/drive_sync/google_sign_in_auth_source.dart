@@ -29,6 +29,7 @@ class GoogleSignInAuthSource implements DriveAuthSource {
   GoogleSignInAccount? _currentUser;
   Future<void>? _initialization;
 
+  @override
   Future<void> ensureInitialized() {
     return _initialization ??= _initialize();
   }
@@ -67,6 +68,7 @@ class GoogleSignInAuthSource implements DriveAuthSource {
   /// usable on web — there, sign-in happens through the rendered Google
   /// button instead, and its result surfaces the same way (through
   /// [accountEmailChanges]).
+  @override
   Future<void> signIn() async {
     await ensureInitialized();
     await _instance.authenticate();

@@ -9,6 +9,16 @@ const driveAppdataScope = 'https://www.googleapis.com/auth/drive.appdata';
 /// macOS/Web, a hand-built OAuth loopback flow on Windows). Everything that
 /// talks to the Drive API is written once against this interface.
 abstract class DriveAuthSource {
+  /// Performs whatever async setup is needed before this source can be
+  /// used (e.g. attempting a silent/lightweight restore of a previous
+  /// session). Safe to call multiple times.
+  Future<void> ensureInitialized();
+
+  /// Triggers interactive sign-in. Not necessarily supported on every
+  /// platform (e.g. web sign-in happens through a rendered button
+  /// instead) — such sources should throw rather than silently no-op.
+  Future<void> signIn();
+
   /// A valid (non-expired) bearer token, or null if signed out. Safe to
   /// call before every request — implementations are expected to cache/
   /// refresh internally rather than force callers to track expiry.

@@ -2,18 +2,34 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Flutter (Debug, VM Service 23532)",
+      "name": "Flutter (Debug, VM Service 6666)",
       "request": "launch",
       "type": "dart",
       "flutterMode": "debug",
-      "toolArgs": ["--host-vmservice-port", "23532"]
+      "toolArgs": ["--host-vmservice-port", "6666"]
     },
     {
-      "name": "Flutter Web (Debug, Web Port 23532)",
+      "name": "Flutter Web (Debug, Web Port 6666)",
       "request": "launch",
       "type": "dart",
       "flutterMode": "debug",
-      "toolArgs": ["--web-port", "23532"]
+      "toolArgs": ["--web-port", "6666"]
+    },
+    {
+      "name": "Flutter macOS (Debug, VM Service 6666)",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "debug",
+      "deviceId": "macos",
+      "toolArgs": ["--host-vmservice-port", "6666"]
+    },
+    {
+      "name": "Flutter Windows (Debug, VM Service 6666)",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "debug",
+      "deviceId": "windows",
+      "toolArgs": ["--host-vmservice-port", "6666"]
     }
   ]
 }

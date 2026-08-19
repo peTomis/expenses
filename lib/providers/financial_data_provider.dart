@@ -1,6 +1,10 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'category_provider.dart';
+import 'shared_preferences_provider.dart';
 
 final financialDataProvider =
     NotifierProvider<FinancialDataNotifier, FinancialDataState>(
@@ -204,6 +208,36 @@ class FinancialDataState {
       'accountData': accountData.toJson(),
     };
   }
+
+  static FinancialDataState? fromJson(Map<String, dynamic> json) {
+    final monthlyDataJson = json['monthlyData'];
+    final accountDataJson = json['accountData'];
+    if (monthlyDataJson is! List || accountDataJson is! Map) {
+      return null;
+    }
+
+    final accountData = FinancialAccountData.fromJson(
+      Map<String, dynamic>.from(accountDataJson),
+    );
+    if (accountData == null) {
+      return null;
+    }
+
+    final monthlyData = <MonthlyFinancialData>[];
+    for (final item in monthlyDataJson) {
+      if (item is! Map) {
+        continue;
+      }
+      final monthData = MonthlyFinancialData.fromJson(
+        Map<String, dynamic>.from(item),
+      );
+      if (monthData != null) {
+        monthlyData.add(monthData);
+      }
+    }
+
+    return FinancialDataState(monthlyData: monthlyData, accountData: accountData);
+  }
 }
 
 class MonthlyFinancialData {
@@ -246,6 +280,40 @@ class MonthlyFinancialData {
       'data': data.map((entry) => entry.toJson()).toList(),
     };
   }
+
+  static MonthlyFinancialData? fromJson(Map<String, dynamic> json) {
+    final month = json['month'] as int?;
+    final year = json['year'] as int?;
+    final expenses = (json['expenses'] as num?)?.toDouble();
+    final income = (json['income'] as num?)?.toDouble();
+    final dataJson = json['data'];
+    if (month == null ||
+        year == null ||
+        expenses == null ||
+        income == null ||
+        dataJson is! List) {
+      return null;
+    }
+
+    final data = <FinancialDataEntry>[];
+    for (final item in dataJson) {
+      if (item is! Map) {
+        continue;
+      }
+      final entry = FinancialDataEntry.fromJson(Map<String, dynamic>.from(item));
+      if (entry != null) {
+        data.add(entry);
+      }
+    }
+
+    return MonthlyFinancialData(
+      month: month,
+      year: year,
+      expenses: expenses,
+      income: income,
+      data: data,
+    );
+  }
 }
 
 class FinancialDataEntry {
@@ -272,6 +340,27 @@ class FinancialDataEntry {
       'category': category,
     };
   }
+
+  static FinancialDataEntry? fromJson(Map<String, dynamic> json) {
+    final timestampString = json['timestamp'] as String?;
+    final timestamp = timestampString == null
+        ? null
+        : DateTime.tryParse(timestampString);
+    final amount = (json['amount'] as num?)?.toDouble();
+    final account = json['account'] as int?;
+    final merchant = json['merchant'] as String?;
+    if (timestamp == null || amount == null || account == null || merchant == null) {
+      return null;
+    }
+
+    return FinancialDataEntry(
+      timestamp: timestamp,
+      amount: amount,
+      account: account,
+      merchant: merchant,
+      category: json['category'] as String?,
+    );
+  }
 }
 
 class FinancialAccountData {
@@ -289,6 +378,26 @@ class FinancialAccountData {
 
   Map<String, dynamic> toJson() {
     return {'account': account, 'currency': currency.toJson()};
+  }
+
+  static FinancialAccountData? fromJson(Map<String, dynamic> json) {
+    final accountJson = json['account'];
+    final currencyJson = json['currency'];
+    if (accountJson is! List || currencyJson is! Map) {
+      return null;
+    }
+
+    final currency = CurrencyData.fromJson(
+      Map<String, dynamic>.from(currencyJson),
+    );
+    if (currency == null) {
+      return null;
+    }
+
+    return FinancialAccountData(
+      account: accountJson.cast<int>(),
+      currency: currency,
+    );
   }
 }
 
@@ -309,11 +418,32 @@ class CurrencyData {
   Map<String, dynamic> toJson() {
     return {'name': name, 'symbol': symbol};
   }
+
+  static CurrencyData? fromJson(Map<String, dynamic> json) {
+    final name = json['name'] as String?;
+    final symbol = json['symbol'] as String?;
+    if (name == null || symbol == null) {
+      return null;
+    }
+
+    return supportedCurrencies.firstWhere(
+      (currency) => currency.name == name && currency.symbol == symbol,
+      orElse: () => CurrencyData(name: name, symbol: symbol),
+    );
+  }
 }
 
 class FinancialDataNotifier extends Notifier<FinancialDataState> {
+  static const _key = 'financialData';
+
   @override
   FinancialDataState build() {
+    final stored = ref.read(sharedPreferencesProvider).getString(_key);
+    final storedState = stored == null ? null : _decodeState(stored);
+    if (storedState != null) {
+      return storedState;
+    }
+
     return FinancialDataState(
       monthlyData: mockedMonthlyFinancialData,
       accountData: const FinancialAccountData(
@@ -324,8 +454,10 @@ class FinancialDataNotifier extends Notifier<FinancialDataState> {
   }
 
   void setCurrency(CurrencyData currency) {
-    state = state.copyWith(
-      accountData: state.accountData.copyWith(currency: currency),
+    _setState(
+      state.copyWith(
+        accountData: state.accountData.copyWith(currency: currency),
+      ),
     );
   }
 
@@ -357,7 +489,7 @@ class FinancialDataNotifier extends Notifier<FinancialDataState> {
       return a.month.compareTo(b.month);
     });
 
-    state = state.copyWith(monthlyData: monthlyData);
+    _setState(state.copyWith(monthlyData: monthlyData));
   }
 
   int entryCountForCategory(String categoryUuid) {
@@ -389,7 +521,29 @@ class FinancialDataNotifier extends Notifier<FinancialDataState> {
         ]),
     ];
 
-    state = state.copyWith(monthlyData: monthlyData);
+    _setState(state.copyWith(monthlyData: monthlyData));
+  }
+
+  void _setState(FinancialDataState newState) {
+    state = newState;
+    unawaited(_persist(newState));
+  }
+
+  Future<void> _persist(FinancialDataState newState) async {
+    final preferences = ref.read(sharedPreferencesProvider);
+    await preferences.setString(_key, jsonEncode(newState.toJson()));
+  }
+
+  FinancialDataState? _decodeState(String jsonString) {
+    try {
+      final decoded = jsonDecode(jsonString);
+      if (decoded is! Map) {
+        return null;
+      }
+      return FinancialDataState.fromJson(Map<String, dynamic>.from(decoded));
+    } on FormatException {
+      return null;
+    }
   }
 
   MonthlyFinancialData _monthlyDataFromEntries(

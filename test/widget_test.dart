@@ -6,8 +6,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:expenses/components/button/app_button.dart';
 import 'package:expenses/components/text_input/app_text_input.dart';
 import 'package:expenses/main.dart';
+import 'package:expenses/providers/shared_preferences_provider.dart';
 
 void main() {
+  late SharedPreferences preferences;
+
   setUpAll(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
     SharedPreferences.setMockInitialValues({});
@@ -31,12 +34,19 @@ void main() {
               return null;
           }
         });
+
+    preferences = await SharedPreferences.getInstance();
   });
 
   testWidgets('Shows username form when no local account is set', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const ProviderScope(child: MyApp()));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [sharedPreferencesProvider.overrideWithValue(preferences)],
+        child: const MyApp(),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Choose an username'), findsOneWidget);

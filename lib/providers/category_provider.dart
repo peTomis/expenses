@@ -1,7 +1,11 @@
+import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'shared_preferences_provider.dart';
 
 final categoryProvider =
     NotifierProvider<CategoryNotifier, List<FinancialCategory>>(
@@ -179,12 +183,60 @@ class FinancialCategory {
   }
 }
 
+const Map<String, IconData> _categoryNameKeywordIcons = {
+  'restaurant': Icons.restaurant_outlined,
+  'bar': Icons.restaurant_outlined,
+  'food': Icons.restaurant_outlined,
+  'bill': Icons.receipt_long_outlined,
+  'utility': Icons.receipt_long_outlined,
+  'bureaucracy': Icons.account_balance_outlined,
+  'tax': Icons.account_balance_outlined,
+  'cloth': Icons.checkroom_outlined,
+  'book': Icons.collections_bookmark_outlined,
+  'pet': Icons.pets_outlined,
+  'fuel': Icons.local_gas_station_outlined,
+  'gas': Icons.local_gas_station_outlined,
+  'gift': Icons.card_giftcard_outlined,
+  'grocery': Icons.local_grocery_store_outlined,
+  'market': Icons.local_grocery_store_outlined,
+  'house': Icons.home_outlined,
+  'rent': Icons.home_outlined,
+  'loan': Icons.request_quote_outlined,
+  'operation': Icons.sync_alt_outlined,
+  'transfer': Icons.sync_alt_outlined,
+  'salary': Icons.work_outline,
+  'work': Icons.work_outline,
+  'saving': Icons.savings_outlined,
+  'software': Icons.apps_outlined,
+  'app': Icons.apps_outlined,
+  'subscription': Icons.apps_outlined,
+  'tech': Icons.devices_outlined,
+  'electronic': Icons.devices_outlined,
+  'travel': Icons.flight_takeoff_outlined,
+  'flight': Icons.flight_takeoff_outlined,
+  'fun': Icons.flight_takeoff_outlined,
+  'stream': Icons.live_tv_outlined,
+  'tv': Icons.live_tv_outlined,
+  'game': Icons.sports_esports_outlined,
+};
+
 class CategoryNotifier extends Notifier<List<FinancialCategory>> {
+  static const _key = 'categories';
+
   final _random = Random.secure();
 
   @override
   List<FinancialCategory> build() {
-    return _sortCategories(defaultCategories);
+    final stored = ref.read(sharedPreferencesProvider).getString(_key);
+    final storedCategories = stored == null
+        ? null
+        : _decodeCategories(stored);
+
+    return _sortCategories(
+      storedCategories != null && storedCategories.isNotEmpty
+          ? storedCategories
+          : defaultCategories,
+    );
   }
 
   void addCategory({required String name, IconData? icon, Color? color}) {
@@ -196,18 +248,29 @@ class CategoryNotifier extends Notifier<List<FinancialCategory>> {
       color: color ?? const Color(0xFF607D8B),
     );
 
-    state = _sortCategories([...state, category]);
+    _setState(_sortCategories([...state, category]));
   }
 
   IconData iconForCategoryName(String name) {
+    final lowerCaseName = name.toLowerCase();
+    for (final entry in _categoryNameKeywordIcons.entries) {
+      if (lowerCaseName.contains(entry.key)) {
+        return entry.value;
+      }
+    }
+
     return Icons.label_outline;
   }
 
   void updateCategory(FinancialCategory category) {
-    state = _sortCategories([
-      for (final existingCategory in state)
-        existingCategory.uuid == category.uuid ? category : existingCategory,
-    ]);
+    _setState(
+      _sortCategories([
+        for (final existingCategory in state)
+          existingCategory.uuid == category.uuid
+              ? category
+              : existingCategory,
+      ]),
+    );
   }
 
   void removeCategory(String uuid) {
@@ -215,10 +278,12 @@ class CategoryNotifier extends Notifier<List<FinancialCategory>> {
       return;
     }
 
-    state = _sortCategories([
-      for (final category in state)
-        if (category.uuid != uuid) category,
-    ]);
+    _setState(
+      _sortCategories([
+        for (final category in state)
+          if (category.uuid != uuid) category,
+      ]),
+    );
   }
 
   void replaceCategories(List<FinancialCategory> categories) {
@@ -226,7 +291,48 @@ class CategoryNotifier extends Notifier<List<FinancialCategory>> {
       return;
     }
 
-    state = _sortCategories(categories);
+    _setState(_sortCategories(categories));
+  }
+
+  void _setState(List<FinancialCategory> categories) {
+    state = categories;
+    unawaited(_persist(categories));
+  }
+
+  Future<void> _persist(List<FinancialCategory> categories) async {
+    final preferences = ref.read(sharedPreferencesProvider);
+    final jsonString = jsonEncode(
+      categories.map((category) => category.toJson()).toList(),
+    );
+    await preferences.setString(_key, jsonString);
+  }
+
+  List<FinancialCategory>? _decodeCategories(String jsonString) {
+    try {
+      final decoded = jsonDecode(jsonString);
+      if (decoded is! List) {
+        return null;
+      }
+
+      final categories = <FinancialCategory>[];
+      for (final item in decoded) {
+        final category = switch (item) {
+          final Map<String, dynamic> json => FinancialCategory.fromJson(json),
+          final Map json => FinancialCategory.fromJson(
+            Map<String, dynamic>.from(json),
+          ),
+          _ => null,
+        };
+
+        if (category != null) {
+          categories.add(category);
+        }
+      }
+
+      return categories;
+    } on FormatException {
+      return null;
+    }
   }
 
   List<FinancialCategory> _sortCategories(List<FinancialCategory> categories) {

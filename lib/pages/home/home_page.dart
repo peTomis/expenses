@@ -8,7 +8,7 @@ import 'home_providers.dart';
 import 'widgets/add_entry_sheet.dart';
 import 'widgets/balance_carousel.dart';
 
-const _bottomNavigationHeight = 112.0;
+const _bottomNavigationHeight = AppTabBar.totalHeight;
 
 const _homeTabItems = [
   AppTabBarItem(

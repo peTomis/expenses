@@ -5,6 +5,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'last_mutation_provider.dart';
 import 'shared_preferences_provider.dart';
 
 final categoryProvider =
@@ -297,6 +298,7 @@ class CategoryNotifier extends Notifier<List<FinancialCategory>> {
   void _setState(List<FinancialCategory> categories) {
     state = categories;
     unawaited(_persist(categories));
+    ref.read(lastMutationProvider.notifier).touch();
   }
 
   Future<void> _persist(List<FinancialCategory> categories) async {

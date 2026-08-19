@@ -7,7 +7,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'category_provider.dart';
+import '../models/backup_payload.dart';
 
 final dataBackupControllerProvider =
     NotifierProvider<DataBackupController, DataBackupState>(
@@ -69,14 +69,9 @@ class DataBackupController extends Notifier<DataBackupState> {
     );
 
     try {
-      final categories = ref.read(categoryProvider);
+      final payload = BackupPayload.fromProviders(ref);
       final exportedAt = DateTime.now();
-      final jsonString = jsonEncode({
-        'categories': categories
-            .map((category) => category.toJson())
-            .toList(),
-        'exportedAt': exportedAt.toUtc().toIso8601String(),
-      });
+      final jsonString = jsonEncode(payload.toJson());
       final bytes = Uint8List.fromList(utf8.encode(jsonString));
       final fileName =
           'expenses-backup-${exportedAt.toUtc().toIso8601String().split('T').first}.json';
@@ -152,31 +147,16 @@ class DataBackupController extends Notifier<DataBackupState> {
       }
 
       final decoded = jsonDecode(utf8.decode(bytes));
-      final categoriesJson = decoded is Map ? decoded['categories'] : null;
-      if (categoriesJson is! List) {
-        throw const FormatException('Backup file is missing categories.');
+      if (decoded is! Map) {
+        throw const FormatException('Backup file is not valid JSON.');
       }
 
-      final categories = <FinancialCategory>[];
-      for (final item in categoriesJson) {
-        final category = switch (item) {
-          final Map<String, dynamic> json => FinancialCategory.fromJson(json),
-          final Map json => FinancialCategory.fromJson(
-            Map<String, dynamic>.from(json),
-          ),
-          _ => null,
-        };
-
-        if (category != null) {
-          categories.add(category);
-        }
+      final payload = BackupPayload.fromJson(Map<String, dynamic>.from(decoded));
+      if (payload == null) {
+        throw const FormatException('Backup file is invalid or incomplete.');
       }
 
-      if (categories.isEmpty) {
-        throw const FormatException('Backup file has no valid categories.');
-      }
-
-      ref.read(categoryProvider.notifier).replaceCategories(categories);
+      payload.applyToProviders(ref);
 
       final importedAt = DateTime.now();
       state = DataBackupState(

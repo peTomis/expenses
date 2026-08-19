@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'category_provider.dart';
+import 'last_mutation_provider.dart';
 import 'shared_preferences_provider.dart';
 
 final financialDataProvider =
@@ -524,9 +525,14 @@ class FinancialDataNotifier extends Notifier<FinancialDataState> {
     _setState(state.copyWith(monthlyData: monthlyData));
   }
 
+  void replaceAll(FinancialDataState newState) {
+    _setState(newState);
+  }
+
   void _setState(FinancialDataState newState) {
     state = newState;
     unawaited(_persist(newState));
+    ref.read(lastMutationProvider.notifier).touch();
   }
 
   Future<void> _persist(FinancialDataState newState) async {

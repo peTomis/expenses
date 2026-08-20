@@ -9,7 +9,6 @@ import 'home_providers.dart';
 import 'widgets/add_action_sheet.dart';
 import 'widgets/home_overview.dart';
 
-const _bottomNavigationHeight = AppTabBar.totalHeight;
 const _addTabIndex = 2;
 
 const _homeTabItems = [
@@ -20,9 +19,10 @@ const _homeTabItems = [
     label: 'Transactions',
   ),
   AppTabBarItem(
-    icon: Icons.add_circle_outline,
-    selectedIcon: Icons.add_circle,
+    icon: Icons.add,
+    selectedIcon: Icons.add,
     label: 'Add',
+    isAccent: true,
   ),
   AppTabBarItem(
     icon: Icons.donut_small_outlined,
@@ -49,21 +49,22 @@ class _HomePageState extends ConsumerState<HomePage> {
     final selectedTabIndex = ref.watch(homeTabIndexProvider);
 
     return Scaffold(
+      // Content scrolls all the way behind the floating, translucent tab
+      // bar (each page carries its own generous bottom padding so its
+      // last item can still be scrolled clear of the bar's icons) rather
+      // than stopping short at a fixed reserved gap.
       extendBody: true,
       body: SafeArea(
         bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.only(bottom: _bottomNavigationHeight),
-          child: IndexedStack(
-            index: selectedTabIndex,
-            children: const [
-              HomeOverview(),
-              TransactionsPage(),
-              SizedBox.shrink(),
-              CategoriesPage(),
-              SettingsContent(showBackButton: false),
-            ],
-          ),
+        child: IndexedStack(
+          index: selectedTabIndex,
+          children: const [
+            HomeOverview(),
+            TransactionsPage(),
+            SizedBox.shrink(),
+            CategoriesPage(),
+            SettingsContent(showBackButton: false),
+          ],
         ),
       ),
       bottomNavigationBar: AppTabBar(

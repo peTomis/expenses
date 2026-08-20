@@ -49,158 +49,154 @@ class SettingsContent extends ConsumerWidget {
 
     return SafeArea(
       bottom: false,
-      child: Column(
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 130),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                if (showBackButton) ...[
+                  _PlainIconButton(
+                    tooltip: 'Back',
+                    icon: Icons.arrow_back,
+                    onTap: () => Navigator.of(context).pop(),
+                  ),
+                  const SizedBox(width: 12),
+                ],
+                Text(
+                  'Settings',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    color: textColor,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            AppCard(
+              maxWidth: double.infinity,
+              padding: const EdgeInsets.all(18),
+              child: Row(
                 children: [
-                  Row(
-                    children: [
-                      if (showBackButton) ...[
-                        _PlainIconButton(
-                          tooltip: 'Back',
-                          icon: Icons.arrow_back,
-                          onTap: () => Navigator.of(context).pop(),
-                        ),
-                        const SizedBox(width: 12),
-                      ],
-                      Text(
-                        'Settings',
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          color: textColor,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  AppCard(
-                    maxWidth: double.infinity,
-                    padding: const EdgeInsets.all(18),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 46,
-                          height: 46,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: ref
-                                .watch(appPrimary300ColorProvider)
-                                .withValues(alpha: 0.28),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Text(
-                            _initials(username),
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              color: ref.watch(appPrimary50ColorProvider),
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 13),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                username ?? 'Unknown user',
-                                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                  color: textColor,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Main account · ${selectedCurrency.name}',
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: textColor.withValues(alpha: 0.5),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 14),
                   Container(
+                    width: 46,
+                    height: 46,
+                    alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: surfaceColor,
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: textColor.withValues(alpha: 0.08)),
+                      color: ref
+                          .watch(appPrimary300ColorProvider)
+                          .withValues(alpha: 0.28),
+                      shape: BoxShape.circle,
                     ),
-                    child: Column(
-                      children: [
-                        _SettingsRow(
-                          icon: Icons.category_outlined,
-                          label: 'Categories',
-                          value: '${categories.length}',
-                          onTap: () => showCategoryListSheet(context),
-                        ),
-                        _rowDivider(textColor),
-                        _SettingsRow(
-                          icon: Icons.payments_outlined,
-                          label: 'Currency',
-                          value: selectedCurrency.label,
-                          onTap: () => _openCurrencySheet(context, ref),
-                        ),
-                        _rowDivider(textColor),
-                        _SettingsRow(
-                          icon: Icons.auto_awesome_outlined,
-                          label: 'Receipt scanning',
-                          value: 'On',
-                          onTap: null,
-                        ),
-                        _rowDivider(textColor),
-                        _SettingsRow(
-                          icon: _driveSyncIcon(driveSyncState),
-                          label: 'Cloud sync',
-                          value: _driveSyncValue(driveSyncState),
-                          onTap: () => _openDriveSyncSheet(context, ref),
-                        ),
-                        _rowDivider(textColor),
-                        _SettingsRow(
-                          icon: _backupIcon(backupState),
-                          label: 'Backup',
-                          value: _backupValue(backupState),
-                          onTap: () => _openBackupSheet(context, ref),
-                        ),
-                        _rowDivider(textColor),
-                        const _SettingsRow(
-                          icon: Icons.palette_outlined,
-                          label: 'Appearance',
-                          value: 'Dark',
-                          onTap: null,
-                        ),
-                      ],
+                    child: Text(
+                      _initials(username),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: ref.watch(appPrimary50ColorProvider),
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 24),
-                  Align(
-                    alignment: Alignment.center,
-                    child: TextButton.icon(
-                      onPressed: () => _logout(context, ref),
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                      icon: const Icon(Icons.logout, size: 24),
-                      label: Text(
-                        'Logout',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
+                  const SizedBox(width: 13),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          username ?? 'Unknown user',
+                          style: Theme.of(context).textTheme.bodyLarge
+                              ?.copyWith(
+                                color: textColor,
+                                fontWeight: FontWeight.w600,
+                              ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Main account · ${selectedCurrency.name}',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: textColor.withValues(alpha: 0.5),
+                              ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
-          ),
-          const SizedBox(height: 24),
-          const DevLogo(),
-        ],
+            const SizedBox(height: 14),
+            Container(
+              decoration: BoxDecoration(
+                color: surfaceColor,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: textColor.withValues(alpha: 0.08)),
+              ),
+              child: Column(
+                children: [
+                  _SettingsRow(
+                    icon: Icons.category_outlined,
+                    label: 'Categories',
+                    value: '${categories.length}',
+                    onTap: () => showCategoryListSheet(context),
+                  ),
+                  _rowDivider(textColor),
+                  _SettingsRow(
+                    icon: Icons.payments_outlined,
+                    label: 'Currency',
+                    value: selectedCurrency.label,
+                    onTap: () => _openCurrencySheet(context, ref),
+                  ),
+                  _rowDivider(textColor),
+                  _SettingsRow(
+                    icon: Icons.auto_awesome_outlined,
+                    label: 'Receipt scanning',
+                    value: 'On',
+                    onTap: null,
+                  ),
+                  _rowDivider(textColor),
+                  _SettingsRow(
+                    icon: _driveSyncIcon(driveSyncState),
+                    label: 'Cloud sync',
+                    value: _driveSyncValue(driveSyncState),
+                    onTap: () => _openDriveSyncSheet(context, ref),
+                  ),
+                  _rowDivider(textColor),
+                  _SettingsRow(
+                    icon: _backupIcon(backupState),
+                    label: 'Backup',
+                    value: _backupValue(backupState),
+                    onTap: () => _openBackupSheet(context, ref),
+                  ),
+                  _rowDivider(textColor),
+                  const _SettingsRow(
+                    icon: Icons.palette_outlined,
+                    label: 'Appearance',
+                    value: 'Dark',
+                    onTap: null,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            Align(
+              alignment: Alignment.center,
+              child: TextButton.icon(
+                onPressed: () => _logout(context, ref),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                icon: const Icon(Icons.logout, size: 24),
+                label: Text(
+                  'Logout',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            const DevLogo(),
+          ],
+        ),
       ),
     );
   }
@@ -218,7 +214,9 @@ class SettingsContent extends ConsumerWidget {
   String _driveSyncValue(DriveSyncState state) {
     return switch (state.status) {
       DriveSyncStatus.synced =>
-        state.lastSyncedAt == null ? 'Synced' : 'Synced ${_formatTimeLabel(state.lastSyncedAt!)}',
+        state.lastSyncedAt == null
+            ? 'Synced'
+            : 'Synced ${_formatTimeLabel(state.lastSyncedAt!)}',
       DriveSyncStatus.syncing => 'Syncing...',
       DriveSyncStatus.error => 'Issue',
       DriveSyncStatus.idle => 'Connected',
@@ -238,7 +236,9 @@ class SettingsContent extends ConsumerWidget {
   String _backupValue(DataBackupState state) {
     return switch (state.status) {
       DataBackupStatus.done =>
-        state.lastBackupAt == null ? 'Backed up' : _formatTimeLabel(state.lastBackupAt!),
+        state.lastBackupAt == null
+            ? 'Backed up'
+            : _formatTimeLabel(state.lastBackupAt!),
       DataBackupStatus.working => 'Working...',
       DataBackupStatus.failed => 'Issue',
       DataBackupStatus.idle => 'Never',
@@ -255,7 +255,9 @@ class SettingsContent extends ConsumerWidget {
           for (final currency in CurrencyData.supportedCurrencies)
             _SheetOption(
               label: currency.label,
-              selected: currency == ref.read(financialDataProvider).accountData.currency,
+              selected:
+                  currency ==
+                  ref.read(financialDataProvider).accountData.currency,
               onTap: () {
                 ref.read(financialDataProvider.notifier).setCurrency(currency);
                 Navigator.of(sheetContext).pop();
@@ -279,7 +281,9 @@ class SettingsContent extends ConsumerWidget {
 
             return _OptionSheet(
               title: 'Cloud sync',
-              subtitle: signedIn ? (state.accountEmail ?? 'Connected') : 'Not connected',
+              subtitle: signedIn
+                  ? (state.accountEmail ?? 'Connected')
+                  : 'Not connected',
               options: [
                 if (signedIn) ...[
                   _SheetOption(
@@ -288,7 +292,9 @@ class SettingsContent extends ConsumerWidget {
                     onTap: isBusy
                         ? null
                         : () async {
-                            await sheetRef.read(driveSyncControllerProvider.notifier).syncNow();
+                            await sheetRef
+                                .read(driveSyncControllerProvider.notifier)
+                                .syncNow();
                           },
                   ),
                   _SheetOption(
@@ -300,7 +306,9 @@ class SettingsContent extends ConsumerWidget {
                             await sheetRef
                                 .read(driveSyncControllerProvider.notifier)
                                 .signOut();
-                            if (sheetContext.mounted) Navigator.of(sheetContext).pop();
+                            if (sheetContext.mounted) {
+                              Navigator.of(sheetContext).pop();
+                            }
                           },
                   ),
                 ] else
@@ -310,8 +318,12 @@ class SettingsContent extends ConsumerWidget {
                     onTap: isBusy
                         ? null
                         : () async {
-                            await sheetRef.read(driveSyncControllerProvider.notifier).signIn();
-                            if (sheetContext.mounted) Navigator.of(sheetContext).pop();
+                            await sheetRef
+                                .read(driveSyncControllerProvider.notifier)
+                                .signIn();
+                            if (sheetContext.mounted) {
+                              Navigator.of(sheetContext).pop();
+                            }
                           },
                   ),
               ],
@@ -339,7 +351,11 @@ class SettingsContent extends ConsumerWidget {
               if (sheetContext.mounted) Navigator.of(sheetContext).pop();
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(exported ? 'Backup saved' : 'Export cancelled')),
+                  SnackBar(
+                    content: Text(
+                      exported ? 'Backup saved' : 'Export cancelled',
+                    ),
+                  ),
                 );
               }
             },
@@ -354,7 +370,11 @@ class SettingsContent extends ConsumerWidget {
               if (sheetContext.mounted) Navigator.of(sheetContext).pop();
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(imported ? 'Backup imported' : 'Import cancelled')),
+                  SnackBar(
+                    content: Text(
+                      imported ? 'Backup imported' : 'Import cancelled',
+                    ),
+                  ),
                 );
               }
             },
@@ -415,20 +435,25 @@ class _SettingsRow extends ConsumerWidget {
               Expanded(
                 child: Text(
                   label,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(color: textColor, fontWeight: FontWeight.w500),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: textColor,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
               Text(
                 value,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: textColor.withValues(alpha: 0.45)),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: textColor.withValues(alpha: 0.45),
+                ),
               ),
               if (onTap != null) ...[
                 const SizedBox(width: 6),
-                Icon(Icons.chevron_right, size: 18, color: textColor.withValues(alpha: 0.3)),
+                Icon(
+                  Icons.chevron_right,
+                  size: 18,
+                  color: textColor.withValues(alpha: 0.3),
+                ),
               ],
             ],
           ),
@@ -439,7 +464,11 @@ class _SettingsRow extends ConsumerWidget {
 }
 
 class _OptionSheet extends ConsumerWidget {
-  const _OptionSheet({required this.title, required this.options, this.subtitle});
+  const _OptionSheet({
+    required this.title,
+    required this.options,
+    this.subtitle,
+  });
 
   final String title;
   final String? subtitle;
@@ -530,7 +559,9 @@ class _SheetOption extends ConsumerWidget {
                 child: Text(
                   label,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: onTap == null ? textColor.withValues(alpha: 0.35) : textColor,
+                    color: onTap == null
+                        ? textColor.withValues(alpha: 0.35)
+                        : textColor,
                     fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                   ),
                 ),

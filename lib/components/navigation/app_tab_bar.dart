@@ -11,11 +11,17 @@ class AppTabBarItem {
     required this.icon,
     required this.selectedIcon,
     required this.label,
+    this.isAccent = false,
   });
 
   final IconData icon;
   final IconData selectedIcon;
   final String label;
+
+  /// Renders this item as a permanently-highlighted accent bubble
+  /// (e.g. the middle "add" action) instead of following the normal
+  /// selected/unselected styling.
+  final bool isAccent;
 }
 
 class AppTabBar extends ConsumerWidget {
@@ -32,17 +38,13 @@ class AppTabBar extends ConsumerWidget {
   final ValueChanged<int> onSelected;
   final ValueChanged<int>? onDoubleSelected;
 
-  /// The bar's total footprint (including its own vertical padding), so
-  /// callers can reserve exactly enough space for it when it floats over
-  /// content (e.g. with `Scaffold.extendBody`).
-  static const double totalHeight =
-      _AppTabBarButton.itemHeight + _tabBarPadding * 2 + (kIsWeb ? 24 : 8) * 2;
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final textColor = ref.watch(appPrimaryTextColorProvider);
     final selectedColor = ref.watch(appPrimary300ColorProvider);
     final surfaceColor = ref.watch(widgetBackgroundColorProvider);
+    final accentBackground = ref.watch(appPrimary50ColorProvider);
+    final accentForeground = ref.watch(appPrimaryDefaultColorProvider);
     final tabBarHeight = _AppTabBarButton.itemHeight + _tabBarPadding * 2;
     final effectiveSelectedIndex = selectedIndex.clamp(0, items.length - 1);
     final naturalItemWidth = _AppTabBarButton.itemWidth;
@@ -50,10 +52,7 @@ class AppTabBar extends ConsumerWidget {
     return SafeArea(
       top: false,
       child: Padding(
-        padding: EdgeInsets.symmetric(
-          horizontal: 20,
-          vertical: kIsWeb ? 24 : 8,
-        ),
+        padding: EdgeInsets.fromLTRB(20, 0, 20, kIsWeb ? 8 : 2),
         child: Align(
           alignment: Alignment.bottomCenter,
           child: LayoutBuilder(
@@ -107,15 +106,17 @@ class AppTabBar extends ConsumerWidget {
                         child: Stack(
                           clipBehavior: Clip.none,
                           children: [
-                            AnimatedPositioned(
-                              duration: const Duration(milliseconds: 280),
-                              curve: Curves.easeOutBack,
-                              left:
-                                  effectiveSelectedIndex * itemWidth +
-                                  (itemWidth - _AppTabBarButton.itemHeight) / 2,
-                              top: 0,
-                              child: _SelectedTabBubble(color: selectedColor),
-                            ),
+                            if (!items[effectiveSelectedIndex].isAccent)
+                              AnimatedPositioned(
+                                duration: const Duration(milliseconds: 280),
+                                curve: Curves.easeOutBack,
+                                left:
+                                    effectiveSelectedIndex * itemWidth +
+                                    (itemWidth - _AppTabBarButton.itemHeight) /
+                                        2,
+                                top: 0,
+                                child: _SelectedTabBubble(color: selectedColor),
+                              ),
                             Row(
                               children: [
                                 for (final indexedItem in items.indexed)
@@ -126,6 +127,8 @@ class AppTabBar extends ConsumerWidget {
                                         indexedItem.$1 ==
                                         effectiveSelectedIndex,
                                     textColor: textColor,
+                                    accentBackground: accentBackground,
+                                    accentForeground: accentForeground,
                                     onTap: () => onSelected(indexedItem.$1),
                                     onDoubleTap:
                                         onDoubleSelected == null ||
@@ -158,6 +161,8 @@ class _AppTabBarButton extends StatelessWidget {
     required this.width,
     required this.isSelected,
     required this.textColor,
+    required this.accentBackground,
+    required this.accentForeground,
     required this.onTap,
     this.onDoubleTap,
   });
@@ -169,12 +174,16 @@ class _AppTabBarButton extends StatelessWidget {
   final double width;
   final bool isSelected;
   final Color textColor;
+  final Color accentBackground;
+  final Color accentForeground;
   final VoidCallback onTap;
   final VoidCallback? onDoubleTap;
 
   @override
   Widget build(BuildContext context) {
-    final foregroundColor = isSelected
+    final foregroundColor = item.isAccent
+        ? accentForeground
+        : isSelected
         ? textColor
         : textColor.withValues(alpha: 0.58);
 
@@ -196,11 +205,30 @@ class _AppTabBarButton extends StatelessWidget {
                 duration: const Duration(milliseconds: 180),
                 curve: Curves.easeOutCubic,
                 scale: isSelected ? 1.06 : 1,
-                child: Icon(
-                  isSelected ? item.selectedIcon : item.icon,
-                  size: 26,
-                  color: foregroundColor,
-                ),
+                child: item.isAccent
+                    ? DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: accentBackground,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.2),
+                          ),
+                        ),
+                        child: SizedBox(
+                          width: itemHeight - 12,
+                          height: itemHeight - 12,
+                          child: Icon(
+                            item.selectedIcon,
+                            size: 28,
+                            color: foregroundColor,
+                          ),
+                        ),
+                      )
+                    : Icon(
+                        isSelected ? item.selectedIcon : item.icon,
+                        size: 26,
+                        color: foregroundColor,
+                      ),
               ),
             ),
           ),

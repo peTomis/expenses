@@ -293,15 +293,17 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
                     ),
                   ),
                   const SizedBox(width: 10),
-                  GestureDetector(
-                    onTap: _pickDate,
-                    child: _BorderedField(
-                      icon: Icons.calendar_today_outlined,
-                      textColor: textColor,
-                      panelColor: panelColor,
-                      child: Text(
-                        _dateLabel(_selectedDate),
-                        style: TextStyle(color: textColor, fontSize: 13.5, fontWeight: FontWeight.w600),
+                  IntrinsicWidth(
+                    child: GestureDetector(
+                      onTap: _pickDate,
+                      child: _BorderedField(
+                        icon: Icons.calendar_today_outlined,
+                        textColor: textColor,
+                        panelColor: panelColor,
+                        child: Text(
+                          _dateLabel(_selectedDate),
+                          style: TextStyle(color: textColor, fontSize: 13.5, fontWeight: FontWeight.w600),
+                        ),
                       ),
                     ),
                   ),

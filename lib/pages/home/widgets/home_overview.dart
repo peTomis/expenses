@@ -75,23 +75,26 @@ class _HomeOverviewState extends ConsumerState<HomeOverview> {
 
     final latestMonth = _latestMonth(allMonthlyData);
     final periodData = switch (_period) {
-      _Period.month => latestMonth == null
-          ? const <MonthlyFinancialData>[]
-          : _monthData(allMonthlyData, latestMonth),
-      _Period.lastMonth => latestMonth == null
-          ? const <MonthlyFinancialData>[]
-          : _monthData(allMonthlyData, _previousMonth(latestMonth)),
-      _Period.year => latestMonth == null
-          ? const <MonthlyFinancialData>[]
-          : _yearData(allMonthlyData, latestMonth.year),
+      _Period.month =>
+        latestMonth == null
+            ? const <MonthlyFinancialData>[]
+            : _monthData(allMonthlyData, latestMonth),
+      _Period.lastMonth =>
+        latestMonth == null
+            ? const <MonthlyFinancialData>[]
+            : _monthData(allMonthlyData, _previousMonth(latestMonth)),
+      _Period.year =>
+        latestMonth == null
+            ? const <MonthlyFinancialData>[]
+            : _yearData(allMonthlyData, latestMonth.year),
     };
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+          child: Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Expanded(
@@ -110,7 +113,10 @@ class _HomeOverviewState extends ConsumerState<HomeOverview> {
                     Text(
                       username == null ? 'Hey there' : 'Hey $username',
                       style: Theme.of(context).textTheme.headlineSmall
-                          ?.copyWith(color: textColor, fontWeight: FontWeight.w700),
+                          ?.copyWith(
+                            color: textColor,
+                            fontWeight: FontWeight.w700,
+                          ),
                     ),
                   ],
                 ),
@@ -118,72 +124,81 @@ class _HomeOverviewState extends ConsumerState<HomeOverview> {
               _AvatarButton(onTap: () => _goToTab(4)),
             ],
           ),
-          const SizedBox(height: 20),
-          _NetBalanceCard(
-            period: _period,
-            onPeriodChanged: (p) => setState(() => _period = p),
-            periodData: periodData,
-            allMonthlyData: allMonthlyData,
-            currencySymbol: currencySymbol,
-          ),
-          const SizedBox(height: 14),
-          AppCard(
-            maxWidth: double.infinity,
-            padding: const EdgeInsets.all(20),
-            title: 'Where it went',
-            titleColor: textColor,
-            titleStyle: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-            titleTrailing: GestureDetector(
-              onTap: () => _goToTab(3),
-              child: Text(
-                'All categories',
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: ref.watch(appPrimary50ColorProvider),
-                  fontWeight: FontWeight.w600,
+        ),
+        const SizedBox(height: 16),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 130),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _NetBalanceCard(
+                  period: _period,
+                  onPeriodChanged: (p) => setState(() => _period = p),
+                  periodData: periodData,
+                  allMonthlyData: allMonthlyData,
+                  currencySymbol: currencySymbol,
                 ),
-              ),
-            ),
-            child: CategoryRingChart(
-              monthlyData: allMonthlyData,
-              currencySymbol: currencySymbol,
-              onLegendTap: (uuid) => _goToTransactions(filter: uuid),
-            ),
-          ),
-          const SizedBox(height: 24),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Recent',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleMedium?.copyWith(
-                    color: textColor,
+                const SizedBox(height: 14),
+                AppCard(
+                  maxWidth: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  title: 'Where it went',
+                  titleColor: textColor,
+                  titleStyle: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
-                ),
-              ),
-              GestureDetector(
-                onTap: () => _goToTransactions(),
-                child: Text(
-                  'See all',
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: ref.watch(appPrimary50ColorProvider),
-                    fontWeight: FontWeight.w600,
+                  titleTrailing: GestureDetector(
+                    onTap: () => _goToTab(3),
+                    child: Text(
+                      'All categories',
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: ref.watch(appPrimary50ColorProvider),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  child: CategoryRingChart(
+                    monthlyData: allMonthlyData,
+                    currencySymbol: currencySymbol,
+                    onLegendTap: (uuid) => _goToTransactions(filter: uuid),
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Recent',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
+                              color: textColor,
+                              fontWeight: FontWeight.w700,
+                            ),
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => _goToTransactions(),
+                      child: Text(
+                        'See all',
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: ref.watch(appPrimary50ColorProvider),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                _RecentTransactionsCard(
+                  monthlyData: allMonthlyData,
+                  currencySymbol: currencySymbol,
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 12),
-          _RecentTransactionsCard(
-            monthlyData: allMonthlyData,
-            currencySymbol: currencySymbol,
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -286,14 +301,22 @@ class _NetBalanceCard extends ConsumerWidget {
           const SizedBox(height: 16),
           Row(
             children: [
-              _InOutColumn(label: 'IN', amount: income, color: const Color(0xFF9CCC65)),
+              _InOutColumn(
+                label: 'IN',
+                amount: income,
+                color: const Color(0xFF9CCC65),
+              ),
               Container(
                 width: 1,
                 height: 30,
                 color: textColor.withValues(alpha: 0.12),
                 margin: const EdgeInsets.symmetric(horizontal: 26),
               ),
-              _InOutColumn(label: 'OUT', amount: expense, color: const Color(0xFFFF7043)),
+              _InOutColumn(
+                label: 'OUT',
+                amount: expense,
+                color: const Color(0xFFFF7043),
+              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -327,8 +350,9 @@ class _NetBalanceCard extends ConsumerWidget {
               ),
               const SizedBox(width: 6),
               _PeriodChip(
-                label: (_latestMonth(allMonthlyData)?.year ?? DateTime.now().year)
-                    .toString(),
+                label:
+                    (_latestMonth(allMonthlyData)?.year ?? DateTime.now().year)
+                        .toString(),
                 selected: period == _Period.year,
                 accent: accent,
                 textColor: textColor,
@@ -343,7 +367,11 @@ class _NetBalanceCard extends ConsumerWidget {
 }
 
 class _InOutColumn extends StatelessWidget {
-  const _InOutColumn({required this.label, required this.amount, required this.color});
+  const _InOutColumn({
+    required this.label,
+    required this.amount,
+    required this.color,
+  });
 
   final String label;
   final double amount;
@@ -365,9 +393,10 @@ class _InOutColumn extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           '€ ${amount.toStringAsFixed(2)}',
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(color: color, fontWeight: FontWeight.w700),
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            color: color,
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ],
     );
@@ -466,7 +495,9 @@ class _RecentTransactionsCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final categoryMap = {for (final c in ref.watch(categoryProvider)) c.uuid: c};
+    final categoryMap = {
+      for (final c in ref.watch(categoryProvider)) c.uuid: c,
+    };
     final entries = [for (final m in monthlyData) ...m.data]
       ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
     final recent = entries.take(4).toList();
@@ -495,7 +526,9 @@ class _RecentTransactionsCard extends ConsumerWidget {
                   : const Color(0xFF9CCC65),
               scanned: entry.scanned,
               onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => TransactionDetailPage(entry: entry)),
+                MaterialPageRoute(
+                  builder: (_) => TransactionDetailPage(entry: entry),
+                ),
               ),
               dense: false,
             ),

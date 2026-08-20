@@ -20,7 +20,13 @@
       "Bash(P=/Users/pe/.pub-cache/hosted/pub.dev/google_sign_in-7.2.0 *)",
       "Read(//Users/pe/.pub-cache/hosted/pub.dev/google_sign_in-7.2.0/**)",
       "Read(//Users/pe/.pub-cache/hosted/pub.dev/google_sign_in-7.2.0/lib/**)",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "Bash(pkill -f \"flutter run -d web-server\")",
+      "Bash(pkill -f \"flutter_tools.*web-server\")",
+      "Bash(pkill -f \"ms-playwright.*chromium\")",
+      "Bash(nohup flutter run -d web-server --web-port=58734)",
+      "Bash(disown)",
+      "Bash(node inspect_sticky.js)"
     ]
   }
 }

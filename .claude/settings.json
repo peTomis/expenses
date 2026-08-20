@@ -19,7 +19,8 @@
       "Read(//Users/pe/.pub-cache/hosted/pub.dev/**)",
       "Bash(P=/Users/pe/.pub-cache/hosted/pub.dev/google_sign_in-7.2.0 *)",
       "Read(//Users/pe/.pub-cache/hosted/pub.dev/google_sign_in-7.2.0/**)",
-      "Read(//Users/pe/.pub-cache/hosted/pub.dev/google_sign_in-7.2.0/lib/**)"
+      "Read(//Users/pe/.pub-cache/hosted/pub.dev/google_sign_in-7.2.0/lib/**)",
+      "Bash(git commit -m ' *)"
     ]
   }
 }

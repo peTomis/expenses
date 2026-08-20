@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../components/button/app_button.dart';
 import '../../components/card/app_card.dart';
 import '../../components/dev_logo/dev_logo.dart';
-import '../../components/select/app_select.dart';
 import '../../providers/category_provider.dart';
 import '../../providers/color_provider.dart';
 import '../../providers/data_backup_provider.dart';
@@ -36,49 +34,6 @@ class SettingsContent extends ConsumerWidget {
     }
   }
 
-  Future<void> _exportBackup(BuildContext context, WidgetRef ref) async {
-    final exported = await ref
-        .read(dataBackupControllerProvider.notifier)
-        .exportBackup();
-
-    if (!context.mounted) {
-      return;
-    }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(exported ? 'Backup saved' : 'Export cancelled')),
-    );
-  }
-
-  Future<void> _importBackup(BuildContext context, WidgetRef ref) async {
-    final imported = await ref
-        .read(dataBackupControllerProvider.notifier)
-        .importBackup();
-
-    if (!context.mounted) {
-      return;
-    }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(imported ? 'Backup imported' : 'Import cancelled'),
-      ),
-    );
-  }
-
-  Future<void> _signInToDrive(BuildContext context, WidgetRef ref) async {
-    await ref.read(driveSyncControllerProvider.notifier).signIn();
-
-    final state = ref.read(driveSyncControllerProvider);
-    if (!context.mounted || state.status != DriveSyncStatus.error) {
-      return;
-    }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(state.message ?? 'Sign-in failed')),
-    );
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final username = ref
@@ -90,6 +45,7 @@ class SettingsContent extends ConsumerWidget {
     final backupState = ref.watch(dataBackupControllerProvider);
     final driveSyncState = ref.watch(driveSyncControllerProvider);
     final textColor = ref.watch(appPrimaryTextColorProvider);
+    final surfaceColor = ref.watch(widgetBackgroundColorProvider);
 
     return SafeArea(
       bottom: false,
@@ -113,76 +69,113 @@ class SettingsContent extends ConsumerWidget {
                       ],
                       Text(
                         'Settings',
-                        style: Theme.of(context).textTheme.titleLarge,
+                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          color: textColor,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 20),
                   AppCard(
                     maxWidth: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                    padding: const EdgeInsets.all(18),
+                    child: Row(
                       children: [
-                        _AccountInfoLine(
-                          icon: Icons.person,
+                        Container(
+                          width: 46,
+                          height: 46,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: ref
+                                .watch(appPrimary300ColorProvider)
+                                .withValues(alpha: 0.28),
+                            shape: BoxShape.circle,
+                          ),
                           child: Text(
-                            username ?? 'Unknown user',
-                            style: Theme.of(context).textTheme.bodyMedium,
+                            _initials(username),
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              color: ref.watch(appPrimary50ColorProvider),
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ),
-                        const SizedBox(height: 12),
-                        _BackupStatusLine(
-                          state: backupState,
-                          onExportPressed: () => _exportBackup(context, ref),
-                          onImportPressed: () => _importBackup(context, ref),
+                        const SizedBox(width: 13),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                username ?? 'Unknown user',
+                                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                  color: textColor,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Main account · ${selectedCurrency.name}',
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: textColor.withValues(alpha: 0.5),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  _SettingsSection(
-                    title: 'Cloud sync',
-                    titleIcon: Icons.cloud_outlined,
-                    titleColor: textColor,
-                    child: _DriveSyncStatusLine(
-                      state: driveSyncState,
-                      onSignInPressed: () => _signInToDrive(context, ref),
-                      onSignOutPressed: () => ref
-                          .read(driveSyncControllerProvider.notifier)
-                          .signOut(),
-                      onSyncPressed: () => ref
-                          .read(driveSyncControllerProvider.notifier)
-                          .syncNow(),
+                  const SizedBox(height: 14),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: surfaceColor,
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: textColor.withValues(alpha: 0.08)),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  _SettingsSection(
-                    title: 'Currency',
-                    titleIcon: Icons.payments_outlined,
-                    titleColor: textColor,
-                    child: AppSelect<CurrencyData>(
-                      value: selectedCurrency,
-                      items: CurrencyData.supportedCurrencies
-                          .map(
-                            (currency) => AppSelectItem(
-                              value: currency,
-                              label: currency.label,
-                            ),
-                          )
-                          .toList(),
-                      onChanged: ref
-                          .read(financialDataProvider.notifier)
-                          .setCurrency,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  _SettingsSection(
-                    title: 'Categories',
-                    titleIcon: Icons.category_outlined,
-                    titleColor: textColor,
-                    child: _CategorySettingsButton(
-                      categoryCount: categories.length,
+                    child: Column(
+                      children: [
+                        _SettingsRow(
+                          icon: Icons.category_outlined,
+                          label: 'Categories',
+                          value: '${categories.length}',
+                          onTap: () => showCategoryListSheet(context),
+                        ),
+                        _rowDivider(textColor),
+                        _SettingsRow(
+                          icon: Icons.payments_outlined,
+                          label: 'Currency',
+                          value: selectedCurrency.label,
+                          onTap: () => _openCurrencySheet(context, ref),
+                        ),
+                        _rowDivider(textColor),
+                        _SettingsRow(
+                          icon: Icons.auto_awesome_outlined,
+                          label: 'Receipt scanning',
+                          value: 'On',
+                          onTap: null,
+                        ),
+                        _rowDivider(textColor),
+                        _SettingsRow(
+                          icon: _driveSyncIcon(driveSyncState),
+                          label: 'Cloud sync',
+                          value: _driveSyncValue(driveSyncState),
+                          onTap: () => _openDriveSyncSheet(context, ref),
+                        ),
+                        _rowDivider(textColor),
+                        _SettingsRow(
+                          icon: _backupIcon(backupState),
+                          label: 'Backup',
+                          value: _backupValue(backupState),
+                          onTap: () => _openBackupSheet(context, ref),
+                        ),
+                        _rowDivider(textColor),
+                        const _SettingsRow(
+                          icon: Icons.palette_outlined,
+                          label: 'Appearance',
+                          value: 'Dark',
+                          onTap: null,
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -211,90 +204,29 @@ class SettingsContent extends ConsumerWidget {
       ),
     );
   }
-}
 
-class _SettingsSection extends StatelessWidget {
-  const _SettingsSection({
-    required this.child,
-    this.title,
-    this.titleIcon,
-    this.titleColor,
-  });
-
-  final Widget child;
-  final String? title;
-  final IconData? titleIcon;
-  final Color? titleColor;
-
-  @override
-  Widget build(BuildContext context) {
-    return AppCard(
-      maxWidth: double.infinity,
-      padding: const EdgeInsets.all(16),
-      title: title,
-      titleIcon: titleIcon,
-      titleColor: titleColor,
-      titleIconColor: titleColor,
-      titleStyle: Theme.of(context).textTheme.bodyMedium,
-      child: child,
-    );
-  }
-}
-
-class _BackupStatusLine extends ConsumerWidget {
-  const _BackupStatusLine({
-    required this.state,
-    required this.onExportPressed,
-    required this.onImportPressed,
-  });
-
-  final DataBackupState state;
-  final VoidCallback? onExportPressed;
-  final VoidCallback? onImportPressed;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final textColor = ref.watch(appPrimaryTextColorProvider);
-    final statusColor = _statusColor(textColor);
-
-    return _AccountInfoLine(
-      icon: _statusIcon,
-      iconColor: statusColor,
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              _statusText,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: statusColor,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          TextButton(
-            onPressed: state.isWorking ? null : onImportPressed,
-            style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              minimumSize: Size.zero,
-            ),
-            child: const Text('Import'),
-          ),
-          TextButton(
-            onPressed: state.isWorking ? null : onExportPressed,
-            style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              minimumSize: Size.zero,
-            ),
-            child: const Text('Export'),
-          ),
-        ],
-      ),
-    );
+  IconData _driveSyncIcon(DriveSyncState state) {
+    return switch (state.status) {
+      DriveSyncStatus.synced => Icons.cloud_done_outlined,
+      DriveSyncStatus.syncing => Icons.sync,
+      DriveSyncStatus.error => Icons.cloud_off_outlined,
+      DriveSyncStatus.idle => Icons.cloud_queue_outlined,
+      DriveSyncStatus.signedOut => Icons.cloud_outlined,
+    };
   }
 
-  IconData get _statusIcon {
+  String _driveSyncValue(DriveSyncState state) {
+    return switch (state.status) {
+      DriveSyncStatus.synced =>
+        state.lastSyncedAt == null ? 'Synced' : 'Synced ${_formatTimeLabel(state.lastSyncedAt!)}',
+      DriveSyncStatus.syncing => 'Syncing...',
+      DriveSyncStatus.error => 'Issue',
+      DriveSyncStatus.idle => 'Connected',
+      DriveSyncStatus.signedOut => 'Not connected',
+    };
+  }
+
+  IconData _backupIcon(DataBackupState state) {
     return switch (state.status) {
       DataBackupStatus.done => Icons.cloud_done_outlined,
       DataBackupStatus.working => Icons.cloud_upload_outlined,
@@ -303,181 +235,311 @@ class _BackupStatusLine extends ConsumerWidget {
     };
   }
 
-  String get _statusText {
+  String _backupValue(DataBackupState state) {
     return switch (state.status) {
       DataBackupStatus.done =>
-        state.lastBackupAt == null
-            ? 'Backed up'
-            : 'Backed up ${_formatTimeLabel(state.lastBackupAt!)}',
+        state.lastBackupAt == null ? 'Backed up' : _formatTimeLabel(state.lastBackupAt!),
       DataBackupStatus.working => 'Working...',
-      DataBackupStatus.failed => state.message ?? 'Backup issue',
-      DataBackupStatus.idle => 'Never backed up',
+      DataBackupStatus.failed => 'Issue',
+      DataBackupStatus.idle => 'Never',
     };
   }
 
-  Color _statusColor(Color textColor) {
-    return switch (state.status) {
-      DataBackupStatus.done => textColor.withValues(alpha: 0.75),
-      DataBackupStatus.working => textColor.withValues(alpha: 0.75),
-      DataBackupStatus.failed => Colors.amberAccent,
-      DataBackupStatus.idle => Colors.redAccent,
-    };
-  }
-}
-
-String _formatTimeLabel(DateTime dateTime) {
-  final local = dateTime.toLocal();
-  final hour = local.hour.toString().padLeft(2, '0');
-  final minute = local.minute.toString().padLeft(2, '0');
-
-  return '$hour:$minute';
-}
-
-class _DriveSyncStatusLine extends ConsumerWidget {
-  const _DriveSyncStatusLine({
-    required this.state,
-    required this.onSignInPressed,
-    required this.onSignOutPressed,
-    required this.onSyncPressed,
-  });
-
-  final DriveSyncState state;
-  final VoidCallback? onSignInPressed;
-  final VoidCallback? onSignOutPressed;
-  final VoidCallback? onSyncPressed;
-
-  bool get _isSignedIn => state.status != DriveSyncStatus.signedOut;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final textColor = ref.watch(appPrimaryTextColorProvider);
-    final statusColor = _statusColor(textColor);
-    final isBusy = state.isSyncing;
-
-    return _AccountInfoLine(
-      icon: _statusIcon,
-      iconColor: statusColor,
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              _statusText,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: statusColor,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          if (_isSignedIn) ...[
-            TextButton(
-              onPressed: isBusy ? null : onSyncPressed,
-              style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                minimumSize: Size.zero,
-              ),
-              child: const Text('Sync now'),
-            ),
-            TextButton(
-              onPressed: isBusy ? null : onSignOutPressed,
-              style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                minimumSize: Size.zero,
-              ),
-              child: const Text('Sign out'),
-            ),
-          ] else
-            TextButton(
-              onPressed: isBusy ? null : onSignInPressed,
-              style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                minimumSize: Size.zero,
-              ),
-              child: const Text('Sign in'),
+  void _openCurrencySheet(BuildContext context, WidgetRef ref) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => _OptionSheet(
+        title: 'Currency',
+        options: [
+          for (final currency in CurrencyData.supportedCurrencies)
+            _SheetOption(
+              label: currency.label,
+              selected: currency == ref.read(financialDataProvider).accountData.currency,
+              onTap: () {
+                ref.read(financialDataProvider.notifier).setCurrency(currency);
+                Navigator.of(sheetContext).pop();
+              },
             ),
         ],
       ),
     );
   }
 
-  IconData get _statusIcon {
-    return switch (state.status) {
-      DriveSyncStatus.synced => Icons.cloud_done_outlined,
-      DriveSyncStatus.syncing => Icons.sync,
-      DriveSyncStatus.error => Icons.cloud_off_outlined,
-      DriveSyncStatus.idle => Icons.cloud_queue_outlined,
-      DriveSyncStatus.signedOut => Icons.cloud_off_outlined,
-    };
+  void _openDriveSyncSheet(BuildContext context, WidgetRef ref) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return Consumer(
+          builder: (sheetContext, sheetRef, _) {
+            final state = sheetRef.watch(driveSyncControllerProvider);
+            final signedIn = state.status != DriveSyncStatus.signedOut;
+            final isBusy = state.isSyncing;
+
+            return _OptionSheet(
+              title: 'Cloud sync',
+              subtitle: signedIn ? (state.accountEmail ?? 'Connected') : 'Not connected',
+              options: [
+                if (signedIn) ...[
+                  _SheetOption(
+                    label: 'Sync now',
+                    icon: Icons.sync,
+                    onTap: isBusy
+                        ? null
+                        : () async {
+                            await sheetRef.read(driveSyncControllerProvider.notifier).syncNow();
+                          },
+                  ),
+                  _SheetOption(
+                    label: 'Sign out',
+                    icon: Icons.logout,
+                    onTap: isBusy
+                        ? null
+                        : () async {
+                            await sheetRef
+                                .read(driveSyncControllerProvider.notifier)
+                                .signOut();
+                            if (sheetContext.mounted) Navigator.of(sheetContext).pop();
+                          },
+                  ),
+                ] else
+                  _SheetOption(
+                    label: 'Sign in',
+                    icon: Icons.login,
+                    onTap: isBusy
+                        ? null
+                        : () async {
+                            await sheetRef.read(driveSyncControllerProvider.notifier).signIn();
+                            if (sheetContext.mounted) Navigator.of(sheetContext).pop();
+                          },
+                  ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
-  String get _statusText {
-    return switch (state.status) {
-      DriveSyncStatus.synced =>
-        state.lastSyncedAt == null
-            ? 'Synced'
-            : 'Synced ${_formatTimeLabel(state.lastSyncedAt!)}',
-      DriveSyncStatus.syncing => 'Syncing...',
-      DriveSyncStatus.error => state.message ?? 'Sync issue',
-      DriveSyncStatus.idle => state.accountEmail ?? 'Connected',
-      DriveSyncStatus.signedOut => 'Not connected',
-    };
-  }
-
-  Color _statusColor(Color textColor) {
-    return switch (state.status) {
-      DriveSyncStatus.synced => textColor.withValues(alpha: 0.75),
-      DriveSyncStatus.syncing => textColor.withValues(alpha: 0.75),
-      DriveSyncStatus.idle => textColor.withValues(alpha: 0.75),
-      DriveSyncStatus.error => Colors.amberAccent,
-      DriveSyncStatus.signedOut => textColor.withValues(alpha: 0.58),
-    };
+  void _openBackupSheet(BuildContext context, WidgetRef ref) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => _OptionSheet(
+        title: 'Backup',
+        options: [
+          _SheetOption(
+            label: 'Export backup',
+            icon: Icons.upload_outlined,
+            onTap: () async {
+              final exported = await ref
+                  .read(dataBackupControllerProvider.notifier)
+                  .exportBackup();
+              if (sheetContext.mounted) Navigator.of(sheetContext).pop();
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(exported ? 'Backup saved' : 'Export cancelled')),
+                );
+              }
+            },
+          ),
+          _SheetOption(
+            label: 'Import backup',
+            icon: Icons.download_outlined,
+            onTap: () async {
+              final imported = await ref
+                  .read(dataBackupControllerProvider.notifier)
+                  .importBackup();
+              if (sheetContext.mounted) Navigator.of(sheetContext).pop();
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(imported ? 'Backup imported' : 'Import cancelled')),
+                );
+              }
+            },
+          ),
+        ],
+      ),
+    );
   }
 }
 
-class _AccountInfoLine extends ConsumerWidget {
-  const _AccountInfoLine({
+String _initials(String? username) {
+  if (username == null || username.trim().isEmpty) {
+    return '?';
+  }
+  final parts = username.trim().split(RegExp(r'\s+'));
+  final letters = parts.take(2).map((p) => p[0].toUpperCase()).join();
+  return letters.isEmpty ? '?' : letters;
+}
+
+String _formatTimeLabel(DateTime dateTime) {
+  final local = dateTime.toLocal();
+  final hour = local.hour.toString().padLeft(2, '0');
+  final minute = local.minute.toString().padLeft(2, '0');
+  return '$hour:$minute';
+}
+
+Widget _rowDivider(Color textColor) {
+  return Divider(height: 1, color: textColor.withValues(alpha: 0.07));
+}
+
+class _SettingsRow extends ConsumerWidget {
+  const _SettingsRow({
     required this.icon,
-    required this.child,
-    this.iconColor,
+    required this.label,
+    required this.value,
+    required this.onTap,
   });
 
   final IconData icon;
-  final Widget child;
-  final Color? iconColor;
+  final String label;
+  final String value;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final textColor = ref.watch(appPrimaryTextColorProvider);
 
-    return Row(
-      children: [
-        SizedBox(
-          width: 24,
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Icon(icon, color: iconColor ?? textColor, size: 20),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
+          child: Row(
+            children: [
+              Icon(icon, size: 20, color: textColor.withValues(alpha: 0.6)),
+              const SizedBox(width: 13),
+              Expanded(
+                child: Text(
+                  label,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(color: textColor, fontWeight: FontWeight.w500),
+                ),
+              ),
+              Text(
+                value,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: textColor.withValues(alpha: 0.45)),
+              ),
+              if (onTap != null) ...[
+                const SizedBox(width: 6),
+                Icon(Icons.chevron_right, size: 18, color: textColor.withValues(alpha: 0.3)),
+              ],
+            ],
           ),
         ),
-        const SizedBox(width: 12),
-        Expanded(child: child),
-      ],
+      ),
     );
   }
 }
 
-class _CategorySettingsButton extends StatelessWidget {
-  const _CategorySettingsButton({required this.categoryCount});
+class _OptionSheet extends ConsumerWidget {
+  const _OptionSheet({required this.title, required this.options, this.subtitle});
 
-  final int categoryCount;
+  final String title;
+  final String? subtitle;
+  final List<_SheetOption> options;
 
   @override
-  Widget build(BuildContext context) {
-    return AppButton(
-      label: 'Edit categories ($categoryCount)',
-      onPressed: () => showCategoryListSheet(context),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final textColor = ref.watch(appPrimaryTextColorProvider);
+    final backgroundColor = ref.watch(appPrimary500ColorProvider);
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: textColor.withValues(alpha: 0.1)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
+                  child: Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: textColor,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                if (subtitle != null)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                    child: Text(
+                      subtitle!,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: textColor.withValues(alpha: 0.5),
+                      ),
+                    ),
+                  ),
+                for (final option in options) option,
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SheetOption extends ConsumerWidget {
+  const _SheetOption({
+    required this.label,
+    required this.onTap,
+    this.icon,
+    this.selected = false,
+  });
+
+  final String label;
+  final IconData? icon;
+  final bool selected;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final textColor = ref.watch(appPrimaryTextColorProvider);
+    final accent = ref.watch(appPrimary300ColorProvider);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
+          child: Row(
+            children: [
+              if (icon != null) ...[
+                Icon(icon, size: 19, color: textColor.withValues(alpha: 0.7)),
+                const SizedBox(width: 12),
+              ],
+              Expanded(
+                child: Text(
+                  label,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: onTap == null ? textColor.withValues(alpha: 0.35) : textColor,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                  ),
+                ),
+              ),
+              if (selected) Icon(Icons.check, size: 18, color: accent),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

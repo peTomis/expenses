@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'category_provider.dart';
@@ -318,27 +320,64 @@ class MonthlyFinancialData {
 }
 
 class FinancialDataEntry {
-  const FinancialDataEntry({
+  FinancialDataEntry({
     required this.timestamp,
     required this.amount,
     required this.account,
     required this.merchant,
     this.category,
-  });
+    this.paymentMethod,
+    this.items,
+    this.scanned = false,
+    String? id,
+  }) : id = id ?? _generateEntryId();
 
+  final String id;
   final DateTime timestamp;
   final double amount;
   final int account;
   final String merchant;
   final String? category;
+  final String? paymentMethod;
+  final List<ReceiptItem>? items;
+  final bool scanned;
+
+  FinancialDataEntry copyWith({
+    String? id,
+    DateTime? timestamp,
+    double? amount,
+    int? account,
+    String? merchant,
+    String? category,
+    bool clearCategory = false,
+    String? paymentMethod,
+    List<ReceiptItem>? items,
+    bool? scanned,
+  }) {
+    return FinancialDataEntry(
+      id: id ?? this.id,
+      timestamp: timestamp ?? this.timestamp,
+      amount: amount ?? this.amount,
+      account: account ?? this.account,
+      merchant: merchant ?? this.merchant,
+      category: clearCategory ? null : (category ?? this.category),
+      paymentMethod: paymentMethod ?? this.paymentMethod,
+      items: items ?? this.items,
+      scanned: scanned ?? this.scanned,
+    );
+  }
 
   Map<String, dynamic> toJson() {
     return {
+      'id': id,
       'timestamp': timestamp.toUtc().toIso8601String(),
       'amount': amount,
       'account': account,
       'merchant': merchant,
       'category': category,
+      'paymentMethod': paymentMethod,
+      'items': items?.map((item) => item.toJson()).toList(),
+      'scanned': scanned,
     };
   }
 
@@ -354,13 +393,147 @@ class FinancialDataEntry {
       return null;
     }
 
+    final itemsJson = json['items'];
+    final items = itemsJson is! List
+        ? null
+        : [
+            for (final item in itemsJson)
+              if (item is Map)
+                ReceiptItem.fromJson(Map<String, dynamic>.from(item)),
+          ].whereType<ReceiptItem>().toList();
+
     return FinancialDataEntry(
+      id: json['id'] as String?,
       timestamp: timestamp,
       amount: amount,
       account: account,
       merchant: merchant,
       category: json['category'] as String?,
+      paymentMethod: json['paymentMethod'] as String?,
+      items: items == null || items.isEmpty ? null : items,
+      scanned: json['scanned'] as bool? ?? false,
     );
+  }
+}
+
+final _entryIdRandom = Random.secure();
+
+String _generateEntryId() {
+  final bytes = List<int>.generate(16, (_) => _entryIdRandom.nextInt(256));
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  final hex = bytes.map((byte) => byte.toRadixString(16).padLeft(2, '0')).join();
+
+  return [
+    hex.substring(0, 8),
+    hex.substring(8, 12),
+    hex.substring(12, 16),
+    hex.substring(16, 20),
+    hex.substring(20),
+  ].join('-');
+}
+
+class ReceiptItem {
+  const ReceiptItem({
+    required this.qty,
+    required this.name,
+    required this.price,
+    this.brand = '',
+    this.size = '',
+  });
+
+  final int qty;
+  final String name;
+  final String brand;
+  final String size;
+  final double price;
+
+  String get brandSize => [brand, size].where((s) => s.isNotEmpty).join(' ');
+
+  Map<String, dynamic> toJson() {
+    return {
+      'qty': qty,
+      'name': name,
+      'brand': brand,
+      'size': size,
+      'price': price,
+    };
+  }
+
+  static ReceiptItem? fromJson(Map<String, dynamic> json) {
+    final qty = json['qty'] as int?;
+    final name = json['name'] as String?;
+    final price = (json['price'] as num?)?.toDouble();
+    if (qty == null || name == null || price == null) {
+      return null;
+    }
+
+    return ReceiptItem(
+      qty: qty,
+      name: name,
+      price: price,
+      brand: json['brand'] as String? ?? '',
+      size: json['size'] as String? ?? '',
+    );
+  }
+}
+
+class PaymentMethodData {
+  const PaymentMethodData({
+    required this.key,
+    required this.label,
+    required this.icon,
+  });
+
+  final String key;
+  final String label;
+  final IconData icon;
+
+  static const amex = PaymentMethodData(
+    key: 'amex',
+    label: 'Amex Gold',
+    icon: Icons.credit_card,
+  );
+  static const visa = PaymentMethodData(
+    key: 'visa',
+    label: 'Visa ·· 4412',
+    icon: Icons.credit_card,
+  );
+  static const revolut = PaymentMethodData(
+    key: 'revolut',
+    label: 'Revolut',
+    icon: Icons.account_balance_wallet_outlined,
+  );
+  static const satispay = PaymentMethodData(
+    key: 'satispay',
+    label: 'Satispay',
+    icon: Icons.smartphone_outlined,
+  );
+  static const cash = PaymentMethodData(
+    key: 'cash',
+    label: 'Cash',
+    icon: Icons.payments_outlined,
+  );
+  static const bank = PaymentMethodData(
+    key: 'bank',
+    label: 'Bank transfer',
+    icon: Icons.account_balance_outlined,
+  );
+
+  static const values = [amex, visa, revolut, satispay, cash, bank];
+
+  static PaymentMethodData? byKey(String? key) {
+    if (key == null) {
+      return null;
+    }
+
+    for (final method in values) {
+      if (method.key == key) {
+        return method;
+      }
+    }
+
+    return null;
   }
 }
 
@@ -510,12 +683,9 @@ class FinancialDataNotifier extends Notifier<FinancialDataState> {
         _monthlyDataFromEntries(monthData.month, monthData.year, [
           for (final entry in monthData.data)
             if (entry.category == categoryUuid)
-              FinancialDataEntry(
-                timestamp: entry.timestamp,
-                amount: entry.amount,
-                account: entry.account,
-                merchant: entry.merchant,
+              entry.copyWith(
                 category: replacementCategoryUuid,
+                clearCategory: replacementCategoryUuid == null,
               )
             else
               entry,

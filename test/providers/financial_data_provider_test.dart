@@ -86,6 +86,79 @@ void main() {
     expect(categoriesUsed.contains(toUuid), isTrue);
   });
 
+  test('FinancialDataEntry.copyWith preserves the new fields', () {
+    final entry = FinancialDataEntry(
+      timestamp: DateTime(2026, 1, 1),
+      amount: -20,
+      account: 1,
+      merchant: 'Coffee',
+      category: defaultCategories.first.uuid,
+      paymentMethod: PaymentMethodData.cash.key,
+      items: const [ReceiptItem(qty: 2, name: 'Espresso', price: 1.5)],
+      scanned: true,
+    );
+
+    final recategorized = entry.copyWith(category: defaultCategories.last.uuid);
+
+    expect(recategorized.id, entry.id);
+    expect(recategorized.category, defaultCategories.last.uuid);
+    expect(recategorized.paymentMethod, PaymentMethodData.cash.key);
+    expect(recategorized.items, entry.items);
+    expect(recategorized.scanned, isTrue);
+  });
+
+  test('FinancialDataEntry JSON round-trip preserves the new fields', () {
+    final entry = FinancialDataEntry(
+      timestamp: DateTime(2026, 1, 1),
+      amount: -74.32,
+      account: 1,
+      merchant: 'Conad',
+      category: defaultCategories.first.uuid,
+      paymentMethod: PaymentMethodData.visa.key,
+      items: const [
+        ReceiptItem(qty: 1, name: 'Pasta', brand: 'Rummo', size: '500g', price: 1.49),
+      ],
+      scanned: true,
+    );
+
+    final restored = FinancialDataEntry.fromJson(entry.toJson());
+
+    expect(restored, isNotNull);
+    expect(restored!.id, entry.id);
+    expect(restored.paymentMethod, PaymentMethodData.visa.key);
+    expect(restored.scanned, isTrue);
+    expect(restored.items, hasLength(1));
+    expect(restored.items!.single.name, 'Pasta');
+    expect(restored.items!.single.brandSize, 'Rummo 500g');
+  });
+
+  test('replaceCategory keeps payment method, items and scanned flag', () {
+    final notifier = container.read(financialDataProvider.notifier);
+    notifier.addEntry(
+      FinancialDataEntry(
+        timestamp: DateTime(2030, 4, 1),
+        amount: -10,
+        account: 1,
+        merchant: 'Kept fields',
+        category: defaultCategories.first.uuid,
+        paymentMethod: PaymentMethodData.satispay.key,
+        scanned: true,
+      ),
+    );
+
+    notifier.replaceCategory(defaultCategories.first.uuid, defaultCategories.last.uuid);
+
+    final entry = container
+        .read(financialDataProvider)
+        .monthlyData
+        .expand((m) => m.data)
+        .firstWhere((e) => e.merchant == 'Kept fields');
+
+    expect(entry.category, defaultCategories.last.uuid);
+    expect(entry.paymentMethod, PaymentMethodData.satispay.key);
+    expect(entry.scanned, isTrue);
+  });
+
   test('state persists to SharedPreferences and survives a rebuild', () async {
     container.read(financialDataProvider.notifier).addEntry(
       FinancialDataEntry(

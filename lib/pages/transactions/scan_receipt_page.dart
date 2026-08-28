@@ -1,3 +1,4 @@
+import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -5,10 +6,11 @@ import 'package:image_picker/image_picker.dart';
 import '../../providers/color_provider.dart';
 import 'add_transaction_page.dart';
 
-/// Receipt capture entry point. Takes/picks a real photo via `image_picker`
-/// (no live in-app camera preview — that would need the heavier `camera`
-/// plugin) then hands off to [AddTransactionPage] for manual entry — there's
-/// no OCR, so nothing is prefilled beyond the `scanned` flag.
+/// Receipt capture entry point. Shows a live camera preview (via the
+/// `camera` plugin) with a framing guide, takes the photo in-app, then hands
+/// off to [AddTransactionPage] for manual entry — there's no OCR, so nothing
+/// is prefilled beyond the `scanned` flag. "Library" still goes through
+/// `image_picker` to pick an existing photo.
 class ScanReceiptPage extends ConsumerStatefulWidget {
   const ScanReceiptPage({super.key});
 
@@ -16,17 +18,113 @@ class ScanReceiptPage extends ConsumerStatefulWidget {
   ConsumerState<ScanReceiptPage> createState() => _ScanReceiptPageState();
 }
 
-class _ScanReceiptPageState extends ConsumerState<ScanReceiptPage> {
+class _ScanReceiptPageState extends ConsumerState<ScanReceiptPage>
+    with WidgetsBindingObserver {
+  CameraController? _controller;
+  Object? _cameraError;
+  bool _capturing = false;
   bool _processing = false;
 
-  Future<void> _capture(ImageSource source) async {
-    final picker = ImagePicker();
-    final photo = await picker.pickImage(source: source, imageQuality: 85);
-    if (!mounted) {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _initializeCamera();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final controller = _controller;
+    if (controller == null) {
       return;
     }
-    if (photo == null) {
-      Navigator.of(context).pop();
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused) {
+      controller.dispose();
+      setState(() => _controller = null);
+    } else if (state == AppLifecycleState.resumed) {
+      _initializeCamera();
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _controller?.dispose();
+    super.dispose();
+  }
+
+  Future<void> _initializeCamera() async {
+    try {
+      final cameras = await availableCameras();
+      final camera = cameras.firstWhere(
+        (c) => c.lensDirection == CameraLensDirection.back,
+        orElse: () => cameras.first,
+      );
+      final controller = CameraController(
+        camera,
+        ResolutionPreset.high,
+        enableAudio: false,
+      );
+      await controller.initialize();
+      if (!mounted) {
+        await controller.dispose();
+        return;
+      }
+      setState(() {
+        _controller = controller;
+        _cameraError = null;
+      });
+    } catch (error) {
+      if (mounted) {
+        setState(() => _cameraError = error);
+      }
+    }
+  }
+
+  Future<void> _shoot() async {
+    final controller = _controller;
+    if (controller == null || !controller.value.isInitialized || _capturing) {
+      return;
+    }
+    setState(() => _capturing = true);
+    try {
+      final photo = await controller.takePicture();
+      await _handlePhoto(photo);
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not capture photo: $error')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _capturing = false);
+      }
+    }
+  }
+
+  Future<void> _pickFromLibrary() async {
+    final picker = ImagePicker();
+    final XFile? photo;
+    try {
+      photo = await picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 85,
+      );
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not open photo library: $error')),
+        );
+      }
+      return;
+    }
+    await _handlePhoto(photo);
+  }
+
+  Future<void> _handlePhoto(XFile? photo) async {
+    if (!mounted || photo == null) {
       return;
     }
 
@@ -37,7 +135,9 @@ class _ScanReceiptPageState extends ConsumerState<ScanReceiptPage> {
     }
 
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const AddTransactionPage(scanned: true)),
+      MaterialPageRoute(
+        builder: (_) => const AddTransactionPage(scanned: true),
+      ),
     );
   }
 
@@ -46,19 +146,39 @@ class _ScanReceiptPageState extends ConsumerState<ScanReceiptPage> {
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
-        child: _processing ? _ProcessingView() : _CameraView(onCapture: _capture),
+        child: _processing
+            ? _ProcessingView()
+            : _CameraView(
+                controller: _controller,
+                error: _cameraError,
+                capturing: _capturing,
+                onCapture: _shoot,
+                onPickLibrary: _pickFromLibrary,
+              ),
       ),
     );
   }
 }
 
 class _CameraView extends StatelessWidget {
-  const _CameraView({required this.onCapture});
+  const _CameraView({
+    required this.controller,
+    required this.error,
+    required this.capturing,
+    required this.onCapture,
+    required this.onPickLibrary,
+  });
 
-  final ValueChanged<ImageSource> onCapture;
+  final CameraController? controller;
+  final Object? error;
+  final bool capturing;
+  final VoidCallback onCapture;
+  final VoidCallback onPickLibrary;
 
   @override
   Widget build(BuildContext context) {
+    final ready = controller != null && controller!.value.isInitialized;
+
     return Column(
       children: [
         Padding(
@@ -72,15 +192,24 @@ class _CameraView extends StatelessWidget {
               ),
               const Spacer(),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 7,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.black.withValues(alpha: 0.55),
                   borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.18),
+                  ),
                 ),
                 child: const Text(
                   'Receipt scan',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
+                  ),
                 ),
               ),
               const Spacer(),
@@ -89,45 +218,50 @@ class _CameraView extends StatelessWidget {
           ),
         ),
         Expanded(
-          child: Container(
-            width: double.infinity,
-            alignment: Alignment.center,
-            color: const Color(0xFF0D1A1F),
-            child: Stack(
+          child: ClipRect(
+            child: Container(
+              width: double.infinity,
               alignment: Alignment.center,
-              children: [
-                Container(
-                  width: 250,
-                  height: 340,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-                  ),
-                  child: Center(
-                    child: Text(
-                      'receipt in frame',
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.35),
-                        fontFamily: 'monospace',
-                        fontSize: 11,
+              color: const Color(0xFF0D1A1F),
+              child: Stack(
+                alignment: Alignment.center,
+                fit: StackFit.expand,
+                children: [
+                  if (error != null)
+                    Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Text(
+                          'Could not start the camera:\n$error',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.6),
+                          ),
+                        ),
                       ),
+                    )
+                  else if (ready)
+                    _CoverCameraPreview(controller: controller!)
+                  else
+                    const Center(
+                      child: CircularProgressIndicator(color: Colors.white54),
                     ),
-                  ),
-                ),
-                for (final alignment in const [
-                  Alignment.topLeft,
-                  Alignment.topRight,
-                  Alignment.bottomLeft,
-                  Alignment.bottomRight,
-                ])
-                  Align(
-                    alignment: alignment,
-                    child: Padding(
-                      padding: const EdgeInsets.all(60),
-                      child: _CornerBracket(alignment: alignment),
-                    ),
-                  ),
-              ],
+                  if (error == null)
+                    for (final alignment in const [
+                      Alignment.topLeft,
+                      Alignment.topRight,
+                      Alignment.bottomLeft,
+                      Alignment.bottomRight,
+                    ])
+                      Align(
+                        alignment: alignment,
+                        child: Padding(
+                          padding: const EdgeInsets.all(60),
+                          child: _CornerBracket(alignment: alignment),
+                        ),
+                      ),
+                ],
+              ),
             ),
           ),
         ),
@@ -137,7 +271,10 @@ class _CameraView extends StatelessWidget {
             children: [
               Text(
                 'Hold steady — we read the total, merchant and lines',
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 12.5),
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.5),
+                  fontSize: 12.5,
+                ),
               ),
               const SizedBox(height: 18),
               Row(
@@ -148,28 +285,39 @@ class _CameraView extends StatelessWidget {
                     icon: Icons.keyboard,
                     label: 'Manual',
                     onTap: () => Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(builder: (_) => const AddTransactionPage()),
+                      MaterialPageRoute(
+                        builder: (_) => const AddTransactionPage(),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 26),
                   GestureDetector(
-                    onTap: () => onCapture(ImageSource.camera),
+                    onTap: ready && !capturing ? onCapture : null,
                     child: Container(
                       width: 72,
                       height: 72,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF8CE6FF),
+                        color: capturing
+                            ? const Color(0xFF8CE6FF).withValues(alpha: 0.4)
+                            : const Color(0xFF8CE6FF),
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.25), width: 4),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.25),
+                          width: 4,
+                        ),
                       ),
-                      child: const Icon(Icons.photo_camera, size: 30, color: Color(0xFF001F2B)),
+                      child: const Icon(
+                        Icons.photo_camera,
+                        size: 30,
+                        color: Color(0xFF001F2B),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 26),
                   _SideAction(
                     icon: Icons.photo_library,
                     label: 'Library',
-                    onTap: () => onCapture(ImageSource.gallery),
+                    onTap: onPickLibrary,
                   ),
                 ],
               ),
@@ -177,6 +325,35 @@ class _CameraView extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Fills its parent with the camera feed, cropping (rather than stretching)
+/// to preserve the sensor's native aspect ratio.
+class _CoverCameraPreview extends StatelessWidget {
+  const _CoverCameraPreview({required this.controller});
+
+  final CameraController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final previewSize = controller.value.previewSize;
+    if (previewSize == null) {
+      return CameraPreview(controller);
+    }
+    return OverflowBox(
+      alignment: Alignment.center,
+      child: FittedBox(
+        fit: BoxFit.cover,
+        child: SizedBox(
+          // The sensor reports its native size in landscape orientation, so
+          // width/height are swapped for a portrait preview.
+          width: previewSize.height,
+          height: previewSize.width,
+          child: CameraPreview(controller),
+        ),
+      ),
     );
   }
 }
@@ -208,7 +385,11 @@ class _CornerBracket extends StatelessWidget {
 }
 
 class _SideAction extends StatelessWidget {
-  const _SideAction({required this.icon, required this.label, required this.onTap});
+  const _SideAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
 
   final IconData icon;
   final String label;
@@ -224,7 +405,10 @@ class _SideAction extends StatelessWidget {
           const SizedBox(height: 5),
           Text(
             label,
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.45), fontSize: 10.5),
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.45),
+              fontSize: 10.5,
+            ),
           ),
         ],
       ),
@@ -233,7 +417,11 @@ class _SideAction extends StatelessWidget {
 }
 
 class _GlassIconButton extends StatelessWidget {
-  const _GlassIconButton({required this.icon, required this.tooltip, required this.onTap});
+  const _GlassIconButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+  });
 
   final IconData icon;
   final String tooltip;
@@ -276,22 +464,34 @@ class _ProcessingView extends ConsumerWidget {
             child: DecoratedBox(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFF8CE6FF).withValues(alpha: 0.3)),
+                border: Border.all(
+                  color: const Color(0xFF8CE6FF).withValues(alpha: 0.3),
+                ),
               ),
               child: Center(
-                child: CircularProgressIndicator(color: accent, strokeWidth: 2.5),
+                child: CircularProgressIndicator(
+                  color: accent,
+                  strokeWidth: 2.5,
+                ),
               ),
             ),
           ),
           const SizedBox(height: 22),
           const Text(
             'Reading the receipt',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 17),
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+              fontSize: 17,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
             'attaching your photo',
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 12.5),
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.5),
+              fontSize: 12.5,
+            ),
           ),
         ],
       ),

@@ -1,13 +1,20 @@
+import 'dart:io' show Platform;
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:image_picker_platform_interface/image_picker_platform_interface.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'i18n/app_localizations.dart';
 import 'pages/auth/auth_gate.dart';
 import 'providers/color_provider.dart';
 import 'providers/shared_preferences_provider.dart';
+import 'services/macos_camera_delegate.dart';
+
+final rootNavigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,6 +25,15 @@ void main() async {
       statusBarColor: Colors.transparent,
     ),
   );
+
+  // `image_picker_macos` has no built-in camera implementation and throws
+  // unless a delegate is supplied.
+  if (!kIsWeb && Platform.isMacOS) {
+    final platform = ImagePickerPlatform.instance;
+    if (platform is CameraDelegatingImagePickerPlatform) {
+      platform.cameraDelegate = MacosCameraDelegate(rootNavigatorKey);
+    }
+  }
 
   final preferences = await SharedPreferences.getInstance();
 
@@ -51,6 +67,7 @@ class MyApp extends ConsumerWidget {
     );
 
     return MaterialApp(
+      navigatorKey: rootNavigatorKey,
       title: 'Expenses',
       debugShowCheckedModeBanner: false,
       supportedLocales: AppLocalizations.supportedLocales,
